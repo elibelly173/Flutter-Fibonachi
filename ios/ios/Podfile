@@ -1,0 +1,30 @@
+platform :ios, '10.0'
+
+# Uncomment this line to define a global platform for your project
+# platform :ios, '12.0'
+
+# Prevent CocoaPods from generating the `Podfile.lock` file, this is not recommended
+# though for most projects. You can safely delete it if you're having issues, but try to avoid
+# modifying it directly.
+# skip_install = true
+
+# The name of the Xcode project
+project 'Runner.xcodeproj'
+
+target 'Runner' do
+  use_frameworks!
+
+  # Pods for Runner
+  # Add any additional iOS dependencies here in the future
+
+  # Flutter-specific CocoaPods dependencies
+  pod 'Firebase/Core'
+  pod 'Firebase/Auth'
+  pod 'Firebase/Firestore'
+  pod 'Firebase/Database'
+  pod 'Firebase/Messaging'
+
+  # Add any other custom CocoaPods dependencies your project might need
+
+end
+
