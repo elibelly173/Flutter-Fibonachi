@@ -17,6 +17,9 @@ class _MapViewState extends State<MapView> {
   double xOffset = 0.0;
   double yOffset = 0.0;
   double yScale = 1.0;
+  bool isEditMode = true;
+  int selectedButton = -1;
+  Map<int, Offset> buttonOffsets = {};
   
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
@@ -91,7 +94,61 @@ class _MapViewState extends State<MapView> {
       ),
       body: Column(
         children: [
-          // Map Area
+          if (selectedButton >= 0) ...[
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Column(
+                children: [
+                  Text('Adjusting Level ${selectedButton + 1}'),
+                  Row(
+                    children: [
+                      SizedBox(width: 20),
+                      Text('Left/Right:'),
+                      Expanded(
+                        child: Slider(
+                          value: buttonOffsets[selectedButton]?.dx ?? 0.2,
+                          min: 0.0,
+                          max: 1.0,
+                          onChanged: (value) => setState(() {
+                            buttonOffsets[selectedButton] = Offset(value, 
+                                buttonOffsets[selectedButton]?.dy ?? levelPositions[selectedButton].y);
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      SizedBox(width: 20),
+                      Text('Up/Down:'),
+                      Expanded(
+                        child: Slider(
+                          value: buttonOffsets[selectedButton]?.dy ?? levelPositions[selectedButton].y,
+                          min: 0.0,
+                          max: 1.0,
+                          onChanged: (value) => setState(() {
+                            buttonOffsets[selectedButton] = Offset(
+                                buttonOffsets[selectedButton]?.dx ?? levelPositions[selectedButton].x, 
+                                value);
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      print('\nFinal Button Positions:');
+                      for (int i = 0; i < levelPositions.length; i++) {
+                        final pos = buttonOffsets[i] ?? Offset(levelPositions[i].x, levelPositions[i].y);
+                        print('Level ${i + 1}: (${pos.dx}, ${pos.dy})');
+                      }
+                    },
+                    child: Text('Save All Positions'),
+                  ),
+                ],
+              ),
+            ),
+          ],
           Expanded(
             child: Stack(
               children: [
@@ -113,184 +170,34 @@ class _MapViewState extends State<MapView> {
                         // Level Buttons
                         for (int i = 0; i < levelPositions.length; i++)
                           Positioned(
-                            left: mapWidth * levelPositions[i].x,
-                            top: mapHeight * (1 - levelPositions[i].y),
-                            child: Builder(
-                              builder: (context) {
-                                final pixelX = mapWidth * levelPositions[i].x;
-                                final pixelY = mapHeight * levelPositions[i].y;
-                                print('Level ${i + 1} position: ($pixelX, $pixelY) from normalized (${levelPositions[i].x}, ${levelPositions[i].y})');
-                                return GestureDetector(
-                                  onTap: () {
-                                    if (isEditing) {
-                                      // In edit mode, just select the level for positioning
-                                      setState(() {
-                                        selectedLevelIndex = i;
-                                      });
-                                    } else {
-                                      // In normal mode, show level intro
-                                      setState(() {
-                                        selectedLevelIndex = i;
-                                        showDialog(
-                                          context: context,
-                                          builder: (BuildContext context) {
-                                            return LevelIntroScreen(
-                                              levelData: LevelData(
-                                                level: i + 1,
-                                                name: "Level ${i + 1}",
-                                                targetNumber: 20,
-                                                time1: 10,
-                                                time2: 80,
-                                                time3: 300,
-                                                x: levelPositions[i].x,
-                                                y: levelPositions[i].y,
-                                              ),
-                                              onStart: () {
-                                                Navigator.pop(context);
-                                              },
-                                              onClose: () {
-                                                Navigator.pop(context);
-                                              },
-                                            );
-                                          },
-                                        );
-                                      });
-                                    }
-                                  },
-                                  child: Container(
-                                    // Add a colored background to make buttons more visible for testing
-                                    color: Colors.red.withOpacity(0.3),
-                                    child: Column(
-                                      children: [
-                                        Image.asset(
-                                          'assets/images/levels_incomplete/${i + 1}.png',
-                                          width: mapWidth * 0.1,
-                                          height: mapWidth * 0.1,
-                                        ),
-                                        Text(
-                                          'L${i + 1}: (${levelPositions[i].x.toStringAsFixed(2)}, ${levelPositions[i].y.toStringAsFixed(2)})',
-                                          style: TextStyle(
-                                            color: Colors.white,
-                                            backgroundColor: Colors.black54,
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                );
+                            left: mapWidth * (buttonOffsets[i]?.dx ?? levelPositions[i].x),
+                            top: mapHeight * (1 - (buttonOffsets[i]?.dy ?? levelPositions[i].y)),
+                            child: GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  selectedButton = i;
+                                  if (!buttonOffsets.containsKey(i)) {
+                                    buttonOffsets[i] = Offset(levelPositions[i].x, levelPositions[i].y);
+                                  }
+                                });
                               },
+                              child: Column(
+                                children: [
+                                  Image.asset(
+                                    'assets/images/levels_incomplete/${i + 1}.png',
+                                    width: mapWidth * 0.1,
+                                    height: mapWidth * 0.1,
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                       ],
                     ),
                   ),
                 ),
-                // Editor Panel
-                if (isEditing && selectedLevelIndex >= 0)
-                  Positioned(
-                    right: 16,
-                    top: 16,
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text('Level ${selectedLevelIndex + 1}'),
-                            const SizedBox(height: 8),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('X: '),
-                                SizedBox(
-                                  width: 200,
-                                  child: Slider(
-                                    value: levelPositions[selectedLevelIndex].x,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        levelPositions[selectedLevelIndex] =
-                                            LevelPosition(
-                                                value,
-                                                levelPositions[
-                                                        selectedLevelIndex]
-                                                    .y);
-                                      });
-                                    },
-                                    min: 0,
-                                    max: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Text('Y: '),
-                                SizedBox(
-                                  width: 200,
-                                  child: Slider(
-                                    value: levelPositions[selectedLevelIndex].y,
-                                    onChanged: (value) {
-                                      setState(() {
-                                        levelPositions[selectedLevelIndex] =
-                                            LevelPosition(
-                                                levelPositions[
-                                                        selectedLevelIndex]
-                                                    .x,
-                                                value);
-                                      });
-                                    },
-                                    min: 0,
-                                    max: 1,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
-          ),
-          Column(
-            children: [
-              Row(
-                children: [
-                  Text('X Offset: ${xOffset.toStringAsFixed(3)}'),
-                  Slider(
-                    value: xOffset,
-                    min: -0.2,
-                    max: 0.2,
-                    onChanged: (value) => setState(() => xOffset = value),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Text('Y Offset: ${yOffset.toStringAsFixed(3)}'),
-                  Slider(
-                    value: yOffset,
-                    min: -0.2,
-                    max: 0.2,
-                    onChanged: (value) => setState(() => yOffset = value),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Text('Y Scale: ${yScale.toStringAsFixed(3)}'),
-                  Slider(
-                    value: yScale,
-                    min: 0.5,
-                    max: 1.5,
-                    onChanged: (value) => setState(() => yScale = value),
-                  ),
-                ],
-              ),
-            ],
           ),
         ],
       ),
