@@ -21,6 +21,8 @@ class _MapViewState extends State<MapView> {
   bool _isMapLoaded = false;
   bool _areImagesLoaded = false;
   int _selectedLevel = -1;
+  double _levelGroundWidth = 0.55; // Starting at 55% of screen width
+  double _levelGroundHeight = 0.08; // Starting at 8% from bottom
 
   // Group all overlay constants together with consistent formatting
   final double overlay31Bottom = 0.866213851001381;
@@ -73,6 +75,14 @@ class _MapViewState extends State<MapView> {
       const MaterialScrollBehavior().copyWith(
     dragDevices: PointerDeviceKind.values.toSet(), // Enable all input devices
   );
+
+  double _closeButtonX = 0.543; // 54.3% from left
+  double _closeButtonY = 0.567; // 56.7% from bottom
+  double _closeButtonSize = 0.10; // 10% of level ground width
+
+  double _levelNumberX = 0.885; // 88.5% from left (center of image)
+  double _levelNumberY = 0.616; // 61.6% from bottom
+  double _levelNumberSize = 0.37; // 37% of level ground width
 
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
@@ -210,150 +220,376 @@ class _MapViewState extends State<MapView> {
     }
 
     return Scaffold(
-      body: ScrollConfiguration(
-        behavior: _scrollBehavior,
-        child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          controller: _scrollController,
-          child: Stack(
-            children: [
-              // Map Background
-              Image.asset(
-                'assets/images/mapback.jpg',
-                width: mapWidth,
-                height: mapHeight,
-                fit: BoxFit.fill,
-                frameBuilder: (context, child, frame, _) {
-                  if (frame != null && !_isMapLoaded) {
-                    WidgetsBinding.instance.addPostFrameCallback((_) {
-                      setState(() {
-                        _isMapLoaded = true;
-                      });
-                    });
-                  }
-                  return child;
-                },
-              ),
-
-              // Section overlays
-              if (_isMapLoaded) ...[
-                // Section 1 (1-6)
-                Positioned(
-                  bottom: 0,
-                  left: 0,
-                  child: Opacity(
-                    opacity: 0.4,
-                    child: Image.asset(
-                      'assets/images/mapback/1-6.png',
-                      width: mapWidth,
-                      height: mapHeight * 0.166,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                ),
-
-                // Section 2 (7-12)
-                Positioned(
-                  bottom: mapHeight * 0.143599000021581,
-                  left: 0,
-                  child: Opacity(
-                    opacity: 0.5,
-                    child: Image.asset(
-                      'assets/images/mapback/7-12.png',
-                      width: mapWidth,
-                      height: mapHeight * 0.173000000000000,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                ),
-
-                // Section 3 (13-18)
-                Positioned(
-                  bottom: mapHeight * overlay13Bottom,
-                  left: 0,
-                  child: Opacity(
-                    opacity: 0.4,
-                    child: Image.asset(
-                      'assets/images/mapback/13-18.png',
-                      width: mapWidth,
-                      height: mapHeight * overlay13Height,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                ),
-
-                // Section 4 (19-24)
-                Positioned(
-                  bottom: mapHeight * overlay19Bottom,
-                  left: 0,
-                  child: Opacity(
-                    opacity: 0.603,
-                    child: Image.asset(
-                      'assets/images/mapback/19-24.png',
-                      width: mapWidth,
-                      height: mapHeight * overlay19Height,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                ),
-
-                // Section 5 (25-30)
-                Positioned(
-                  bottom: mapHeight * overlay25Bottom,
-                  left: 0,
-                  child: Opacity(
-                    opacity: 0.4,
-                    child: Image.asset(
-                      'assets/images/mapback/25-30.png',
-                      width: mapWidth,
-                      height: mapHeight * overlay25Height,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                ),
-
-                // Section 6 (31-32)
-                Positioned(
-                  bottom: mapHeight * overlay31Bottom,
-                  left: 0,
-                  child: Opacity(
-                    opacity: 0.603,
-                    child: Image.asset(
-                      'assets/images/mapback/31-32.png',
-                      width: mapWidth,
-                      height: mapHeight * overlay31Height,
-                      fit: BoxFit.fill,
-                    ),
-                  ),
-                ),
-              ],
-
-              // Level Buttons
-              for (int i = 0; i < levelPositions.length; i++)
-                Positioned(
-                  left: mapWidth * levelPositions[i].x,
-                  top: mapHeight * (1 - levelPositions[i].y),
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _selectedLevel = i;
-                        // TODO: Implement level selection logic
-                      });
+      body: Stack(
+        children: [
+          ScrollConfiguration(
+            behavior: _scrollBehavior,
+            child: SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              controller: _scrollController,
+              child: Stack(
+                children: [
+                  // Map Background
+                  Image.asset(
+                    'assets/images/mapback.jpg',
+                    width: mapWidth,
+                    height: mapHeight,
+                    fit: BoxFit.fill,
+                    frameBuilder: (context, child, frame, _) {
+                      if (frame != null && !_isMapLoaded) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          setState(() {
+                            _isMapLoaded = true;
+                          });
+                        });
+                      }
+                      return child;
                     },
-                    child: Column(
-                      children: [
-                        Image.asset(
-                          'assets/images/levels_incomplete/${i + 1}.png',
-                          width: mapWidth * 0.1,
-                          height: mapWidth * 0.1,
+                  ),
+
+                  // Section overlays
+                  if (_isMapLoaded) ...[
+                    // Section 1 (1-6)
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      child: Opacity(
+                        opacity: 0.4,
+                        child: Image.asset(
+                          'assets/images/mapback/1-6.png',
+                          width: mapWidth,
+                          height: mapHeight * 0.166,
+                          fit: BoxFit.fill,
                         ),
-                      ],
+                      ),
+                    ),
+
+                    // Section 2 (7-12)
+                    Positioned(
+                      bottom: mapHeight * 0.143599000021581,
+                      left: 0,
+                      child: Opacity(
+                        opacity: 0.5,
+                        child: Image.asset(
+                          'assets/images/mapback/7-12.png',
+                          width: mapWidth,
+                          height: mapHeight * 0.173000000000000,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+
+                    // Section 3 (13-18)
+                    Positioned(
+                      bottom: mapHeight * overlay13Bottom,
+                      left: 0,
+                      child: Opacity(
+                        opacity: 0.4,
+                        child: Image.asset(
+                          'assets/images/mapback/13-18.png',
+                          width: mapWidth,
+                          height: mapHeight * overlay13Height,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+
+                    // Section 4 (19-24)
+                    Positioned(
+                      bottom: mapHeight * overlay19Bottom,
+                      left: 0,
+                      child: Opacity(
+                        opacity: 0.603,
+                        child: Image.asset(
+                          'assets/images/mapback/19-24.png',
+                          width: mapWidth,
+                          height: mapHeight * overlay19Height,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+
+                    // Section 5 (25-30)
+                    Positioned(
+                      bottom: mapHeight * overlay25Bottom,
+                      left: 0,
+                      child: Opacity(
+                        opacity: 0.4,
+                        child: Image.asset(
+                          'assets/images/mapback/25-30.png',
+                          width: mapWidth,
+                          height: mapHeight * overlay25Height,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+
+                    // Section 6 (31-32)
+                    Positioned(
+                      bottom: mapHeight * overlay31Bottom,
+                      left: 0,
+                      child: Opacity(
+                        opacity: 0.603,
+                        child: Image.asset(
+                          'assets/images/mapback/31-32.png',
+                          width: mapWidth,
+                          height: mapHeight * overlay31Height,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+                  ],
+
+                  // Level Buttons
+                  for (int i = 0; i < levelPositions.length; i++)
+                    Positioned(
+                      left: mapWidth * levelPositions[i].x,
+                      top: mapHeight * (1 - levelPositions[i].y),
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _selectedLevel = i;
+                            // TODO: Implement level selection logic
+                          });
+                        },
+                        child: Column(
+                          children: [
+                            Image.asset(
+                              'assets/images/levels_incomplete/${i + 1}.png',
+                              width: mapWidth * 0.1,
+                              height: mapWidth * 0.1,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Dim overlay and Level Info Panel
+          if (_selectedLevel >= 0) ...[
+            // Dim the background with tap handler
+            Positioned.fill(
+              child: GestureDetector(
+                onTap: () {
+                  setState(() {
+                    _selectedLevel = -1;
+                  });
+                },
+                child: Container(
+                  color: Colors.black.withOpacity(0.7),
+                ),
+              ),
+            ),
+            // Level info panel
+            Positioned(
+              bottom: MediaQuery.of(context).size.height * _levelGroundHeight,
+              left: 0,
+              right: 0,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  // Level ground image
+                  Image.asset(
+                    'assets/images/level_ground.png',
+                    width: mapWidth * _levelGroundWidth,
+                    fit: BoxFit.fitWidth,
+                  ),
+                  // Level number image
+                  Positioned(
+                    left: (mapWidth * _levelGroundWidth * _levelNumberX) -
+                        ((mapWidth * _levelGroundWidth * _levelNumberSize) / 2),
+                    bottom: mapWidth * _levelGroundWidth * _levelNumberY,
+                    child: Image.asset(
+                      'assets/images/level/level${_selectedLevel + 1}.png',
+                      width: mapWidth * _levelGroundWidth * _levelNumberSize,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                ),
-            ],
-          ),
-        ),
+                  // Close button
+                  Positioned(
+                    right: mapWidth * _levelGroundWidth * (1 - _closeButtonX),
+                    bottom: mapWidth * _levelGroundWidth * _closeButtonY,
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _selectedLevel = -1;
+                        });
+                      },
+                      child: Image.asset(
+                        'assets/images/close.png',
+                        width: mapWidth * _levelGroundWidth * _closeButtonSize,
+                        height: mapWidth * _levelGroundWidth * _closeButtonSize,
+                      ),
+                    ),
+                  ),
+                  // Controls for close button
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Level number X position
+                          Column(
+                            children: [
+                              Text('Level X',
+                                  style: TextStyle(color: Colors.white)),
+                              Row(
+                                children: [
+                                  FloatingActionButton(
+                                    mini: true,
+                                    onPressed: () {
+                                      setState(() {
+                                        _levelNumberX -= 0.01;
+                                        print(
+                                            'Level X: ${(_levelNumberX * 100).toStringAsFixed(1)}%');
+                                      });
+                                    },
+                                    child: const Text('←'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    color: Colors.black54,
+                                    child: Text(
+                                      '${(_levelNumberX * 100).toStringAsFixed(1)}%',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FloatingActionButton(
+                                    mini: true,
+                                    onPressed: () {
+                                      setState(() {
+                                        _levelNumberX += 0.01;
+                                        print(
+                                            'Level X: ${(_levelNumberX * 100).toStringAsFixed(1)}%');
+                                      });
+                                    },
+                                    child: const Text('→'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 20),
+                          // Level number Y position
+                          Column(
+                            children: [
+                              Text('Level Y',
+                                  style: TextStyle(color: Colors.white)),
+                              Row(
+                                children: [
+                                  FloatingActionButton(
+                                    mini: true,
+                                    onPressed: () {
+                                      setState(() {
+                                        _levelNumberY -= 0.01;
+                                        print(
+                                            'Level Y: ${(_levelNumberY * 100).toStringAsFixed(1)}%');
+                                      });
+                                    },
+                                    child: const Text('↓'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    color: Colors.black54,
+                                    child: Text(
+                                      '${(_levelNumberY * 100).toStringAsFixed(1)}%',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FloatingActionButton(
+                                    mini: true,
+                                    onPressed: () {
+                                      setState(() {
+                                        _levelNumberY += 0.01;
+                                        print(
+                                            'Level Y: ${(_levelNumberY * 100).toStringAsFixed(1)}%');
+                                      });
+                                    },
+                                    child: const Text('↑'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const SizedBox(width: 20),
+                          // Level number size control
+                          Column(
+                            children: [
+                              Text('Level Size',
+                                  style: TextStyle(color: Colors.white)),
+                              Row(
+                                children: [
+                                  FloatingActionButton(
+                                    mini: true,
+                                    onPressed: () {
+                                      setState(() {
+                                        _levelNumberSize -= 0.01;
+                                        print(
+                                            'Level Size: ${(_levelNumberSize * 100).toStringAsFixed(1)}%');
+                                      });
+                                    },
+                                    child: const Text('-'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 8),
+                                    color: Colors.black54,
+                                    child: Text(
+                                      '${(_levelNumberSize * 100).toStringAsFixed(1)}%',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  FloatingActionButton(
+                                    mini: true,
+                                    onPressed: () {
+                                      setState(() {
+                                        _levelNumberSize += 0.01;
+                                        print(
+                                            'Level Size: ${(_levelNumberSize * 100).toStringAsFixed(1)}%');
+                                      });
+                                    },
+                                    child: const Text('+'),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // Level info
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        child: Text(
+                          'Level ${_selectedLevel + 1}',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
