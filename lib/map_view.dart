@@ -84,6 +84,16 @@ class _MapViewState extends State<MapView> {
   double _levelNumberY = 0.616; // 61.6% from bottom
   double _levelNumberSize = 0.37; // 37% of level ground width
 
+  double _timerX = 1.15;  // 115% from left
+  double _timerY = 0.28;  // 28% from bottom
+  double _timerSize = 0.17;  // 17% of level ground width
+
+  double _contentX = 0.88;  // 88% from left
+  double _contentY = 0.49;  // 49% from bottom
+  double _contentSize = 0.65;  // 65% of level ground width
+
+  double _targetX = 0.61;  // 61% from left
+
   void _scrollToBottom() {
     if (_scrollController.hasClients) {
       final screenWidth = MediaQuery.of(context).size.width;
@@ -397,6 +407,17 @@ class _MapViewState extends State<MapView> {
                     width: mapWidth * _levelGroundWidth,
                     fit: BoxFit.fitWidth,
                   ),
+                  // Target number image - add it here in the level info panel
+                  Positioned(
+                    left: (mapWidth * _levelGroundWidth * _targetX) -
+                        ((mapWidth * _levelGroundWidth * _timerSize) / 2),
+                    bottom: mapWidth * _levelGroundWidth * _timerY,
+                    child: Image.asset(
+                      'assets/images/target/${_getTargetNumber(_selectedLevel + 1)}.png',
+                      width: mapWidth * _levelGroundWidth * _timerSize,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
                   // Level number image
                   Positioned(
                     left: (mapWidth * _levelGroundWidth * _levelNumberX) -
@@ -405,6 +426,28 @@ class _MapViewState extends State<MapView> {
                     child: Image.asset(
                       'assets/images/level/level${_selectedLevel + 1}.png',
                       width: mapWidth * _levelGroundWidth * _levelNumberSize,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  // Content image - fix the path
+                  Positioned(
+                    left: (mapWidth * _levelGroundWidth * _contentX) -
+                        ((mapWidth * _levelGroundWidth * _contentSize) / 2),
+                    bottom: mapWidth * _levelGroundWidth * _contentY,
+                    child: Image.asset(
+                      'assets/images/contents/content${_selectedLevel + 1}.png',  // Added 's' to contents
+                      width: mapWidth * _levelGroundWidth * _contentSize,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                  // Timer image - update to use time values
+                  Positioned(
+                    left: (mapWidth * _levelGroundWidth * _timerX) -
+                        ((mapWidth * _levelGroundWidth * _timerSize) / 2),
+                    bottom: mapWidth * _levelGroundWidth * _timerY,
+                    child: Image.asset(
+                      'assets/images/timer/timer30.png',  // Use time value instead of level number
+                      width: mapWidth * _levelGroundWidth * _timerSize,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -425,165 +468,18 @@ class _MapViewState extends State<MapView> {
                       ),
                     ),
                   ),
-                  // Controls for close button
-                  Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Level number X position
-                          Column(
-                            children: [
-                              Text('Level X',
-                                  style: TextStyle(color: Colors.white)),
-                              Row(
-                                children: [
-                                  FloatingActionButton(
-                                    mini: true,
-                                    onPressed: () {
-                                      setState(() {
-                                        _levelNumberX -= 0.01;
-                                        print(
-                                            'Level X: ${(_levelNumberX * 100).toStringAsFixed(1)}%');
-                                      });
-                                    },
-                                    child: const Text('←'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                    color: Colors.black54,
-                                    child: Text(
-                                      '${(_levelNumberX * 100).toStringAsFixed(1)}%',
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 16),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  FloatingActionButton(
-                                    mini: true,
-                                    onPressed: () {
-                                      setState(() {
-                                        _levelNumberX += 0.01;
-                                        print(
-                                            'Level X: ${(_levelNumberX * 100).toStringAsFixed(1)}%');
-                                      });
-                                    },
-                                    child: const Text('→'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 20),
-                          // Level number Y position
-                          Column(
-                            children: [
-                              Text('Level Y',
-                                  style: TextStyle(color: Colors.white)),
-                              Row(
-                                children: [
-                                  FloatingActionButton(
-                                    mini: true,
-                                    onPressed: () {
-                                      setState(() {
-                                        _levelNumberY -= 0.01;
-                                        print(
-                                            'Level Y: ${(_levelNumberY * 100).toStringAsFixed(1)}%');
-                                      });
-                                    },
-                                    child: const Text('↓'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                    color: Colors.black54,
-                                    child: Text(
-                                      '${(_levelNumberY * 100).toStringAsFixed(1)}%',
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 16),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  FloatingActionButton(
-                                    mini: true,
-                                    onPressed: () {
-                                      setState(() {
-                                        _levelNumberY += 0.01;
-                                        print(
-                                            'Level Y: ${(_levelNumberY * 100).toStringAsFixed(1)}%');
-                                      });
-                                    },
-                                    child: const Text('↑'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                          const SizedBox(width: 20),
-                          // Level number size control
-                          Column(
-                            children: [
-                              Text('Level Size',
-                                  style: TextStyle(color: Colors.white)),
-                              Row(
-                                children: [
-                                  FloatingActionButton(
-                                    mini: true,
-                                    onPressed: () {
-                                      setState(() {
-                                        _levelNumberSize -= 0.01;
-                                        print(
-                                            'Level Size: ${(_levelNumberSize * 100).toStringAsFixed(1)}%');
-                                      });
-                                    },
-                                    child: const Text('-'),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                        horizontal: 8),
-                                    color: Colors.black54,
-                                    child: Text(
-                                      '${(_levelNumberSize * 100).toStringAsFixed(1)}%',
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 16),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  FloatingActionButton(
-                                    mini: true,
-                                    onPressed: () {
-                                      setState(() {
-                                        _levelNumberSize += 0.01;
-                                        print(
-                                            'Level Size: ${(_levelNumberSize * 100).toStringAsFixed(1)}%');
-                                      });
-                                    },
-                                    child: const Text('+'),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ],
+                  // Remove all the old adjustment buttons here
+                  // Just keep the level number display
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    child: Text(
+                      'Level ${_selectedLevel + 1}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
                       ),
-                      // Level info
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Text(
-                          'Level ${_selectedLevel + 1}',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ],
               ),
@@ -592,5 +488,58 @@ class _MapViewState extends State<MapView> {
         ],
       ),
     );
+  }
+
+  String _getTimeValue(int level) {
+    // For now, return '30' for all levels
+    return '30';  // This will look for 'timer30.png' in the assets
+  }
+
+  // Add this method to get the target number for each level
+  String _getTargetNumber(int level) {
+    String filename = '';
+    // From the plist data
+    switch (level) {
+      case 1:
+      case 2:
+      case 3:
+      case 4:
+      case 5:
+      case 6:
+      case 7:
+      case 8:
+      case 9:
+      case 10:
+      case 11:
+      case 12:
+      case 13:
+      case 14:
+        filename = 'number20';  // First 14 levels have target 20
+        break;
+      case 15:
+      case 18:
+      case 19:
+      case 21:
+      case 22:
+      case 23:
+      case 29:
+      case 30:
+      case 31:
+      case 32:
+        filename = 'number10';  // These levels have target 10
+        break;
+      case 20:
+      case 24:
+      case 25:
+      case 26:
+      case 27:
+      case 28:
+        filename = 'number5';   // These levels have target 5
+        break;
+      default:
+        filename = 'number20';  // Default value
+    }
+    print('Loading target image: assets/images/target/$filename.png');
+    return filename;
   }
 }

@@ -59,6 +59,7 @@ flutter:
     - assets/images/contents/
     - assets/images/level/
     - assets/images/timer/
+    - assets/images/target/
     - assets/images/levels_complete/
     - assets/images/levels_incomplete/
     # Level incomplete images
@@ -76,10 +77,10 @@ flutter:
     - assets/images/continue.png
     - assets/images/level_ground.png
     - assets/images/Vinyet.png
-    - assets/images/number5.png
-    - assets/images/number10.png
-    - assets/images/number20.png
-
+    # Target number images
+    - assets/images/target/number5.png
+    - assets/images/target/number10.png
+    - assets/images/target/number20.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
