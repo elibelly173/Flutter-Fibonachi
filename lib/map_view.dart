@@ -21,8 +21,8 @@ class _MapViewState extends State<MapView> {
   bool _isMapLoaded = false;
   bool _areImagesLoaded = false;
   int _selectedLevel = -1;
-  double _levelGroundWidth = 0.55; // Starting at 55% of screen width
-  double _levelGroundHeight = 0.08; // Starting at 8% from bottom
+  final double _levelGroundWidth = 0.55; // Starting at 55% of screen width
+  final double _levelGroundHeight = 0.08; // Starting at 8% from bottom
 
   // Group all overlay constants together with consistent formatting
   final double overlay31Bottom = 0.866213851001381;
@@ -76,108 +76,74 @@ class _MapViewState extends State<MapView> {
     dragDevices: PointerDeviceKind.values.toSet(), // Enable all input devices
   );
 
-  double _closeButtonX = 0.543; // 54.3% from left
-  double _closeButtonY = 0.567; // 56.7% from bottom
-  double _closeButtonSize = 0.10; // 10% of level ground width
+  final double _closeButtonX = 0.543; // 54.3% from left
+  final double _closeButtonY = 0.567; // 56.7% from bottom
+  final double _closeButtonSize = 0.10; // 10% of level ground width
 
-  double _levelNumberX = 0.885; // 88.5% from left (center of image)
-  double _levelNumberY = 0.616; // 61.6% from bottom
-  double _levelNumberSize = 0.37; // 37% of level ground width
+  final double _levelNumberX = 0.885; // 88.5% from left (center of image)
+  final double _levelNumberY = 0.616; // 61.6% from bottom
+  final double _levelNumberSize = 0.37; // 37% of level ground width
 
-  double _timerX = 1.15;  // 115% from left
-  double _timerY = 0.28;  // 28% from bottom
-  double _timerSize = 0.17;  // 17% of level ground width
+  final double _timerX = 1.15;  // 115% from left
+  final double _timerY = 0.28;  // 28% from bottom
+  final double _timerSize = 0.17;  // 17% of level ground width
 
-  double _contentX = 0.88;  // 88% from left
-  double _contentY = 0.49;  // 49% from bottom
-  double _contentSize = 0.65;  // 65% of level ground width
+  final double _contentX = 0.88;  // 88% from left
+  final double _contentY = 0.50;  // 50% from bottom
+  final double _contentSize = 0.65;  // 65% of level ground width
 
-  double _targetX = 0.61;  // 61% from left
+  final double _targetX = 0.61;  // 61% from left
 
-  void _scrollToBottom() {
+  // Add these with your other state variables
+  final double _continueX = 0.872;  // 87.2% from left
+  final double _continueY = -0.001;  // -0.1% from bottom
+  final double _continueSize = 0.29;  // 29% of level ground width
+
+  // Update target size
+  final double _targetSize = 0.162;  // 16.2% of level ground width
+
+  // Add this method to find lowest incomplete level
+  int _findLowestIncompleteLevel() {
+    // For now, return 1 since all levels are incomplete
+    // Later we'll check game progress to find actual lowest incomplete level
+    return 1;
+  }
+
+  // Modify scroll method to scroll to a specific level
+  void _scrollToLevel(int level) {
     if (_scrollController.hasClients) {
       final screenWidth = MediaQuery.of(context).size.width;
       final mapHeight = screenWidth * _aspectRatio;
-      final maxScroll = _scrollController.position.maxScrollExtent;
-      _scrollController.jumpTo(maxScroll);
+      final levelY = levelPositions[level - 1].y;
+      
+      // Calculate from bottom again
+      final scrollPosition = mapHeight * (1 - levelY) - (MediaQuery.of(context).size.height / 2);
+      _scrollController.jumpTo(scrollPosition.clamp(0, _scrollController.position.maxScrollExtent));
     }
   }
 
   Future<void> _preloadImages() async {
-    // Load map and first section immediately
-    await Future.wait([
-      precacheImage(const AssetImage('assets/images/mapback.jpg'), context),
+    // Load map immediately
+    await precacheImage(const AssetImage('assets/images/mapback.jpg'), context);
+
+    setState(() {
+      _areImagesLoaded = true;
+    });
+
+    // Load everything else in parallel
+    Future.wait([
+      // Map sections
       precacheImage(const AssetImage('assets/images/mapback/1-6.png'), context),
+      precacheImage(const AssetImage('assets/images/mapback/7-12.png'), context),
+      precacheImage(const AssetImage('assets/images/mapback/13-18.png'), context),
+      precacheImage(const AssetImage('assets/images/mapback/19-24.png'), context),
+      precacheImage(const AssetImage('assets/images/mapback/25-30.png'), context),
+      precacheImage(const AssetImage('assets/images/mapback/31-32.png'), context),
+      
+      // All level buttons at once
+      for (int i = 1; i <= 32; i++)
+        precacheImage(AssetImage('assets/images/levels_incomplete/$i.png'), context),
     ]);
-
-    // Set initial loaded state to show something quickly
-    setState(() {
-      _areImagesLoaded = true;
-    });
-
-    // Load the rest in the background
-    _loadRemainingAssets();
-  }
-
-  Future<void> _loadRemainingAssets() async {
-    // Load remaining sections
-    await Future.wait([
-      precacheImage(
-          const AssetImage('assets/images/mapback/7-12.png'), context),
-      precacheImage(
-          const AssetImage('assets/images/mapback/13-18.png'), context),
-      precacheImage(
-          const AssetImage('assets/images/mapback/19-24.png'), context),
-      precacheImage(
-          const AssetImage('assets/images/mapback/25-30.png'), context),
-      precacheImage(
-          const AssetImage('assets/images/mapback/31-32.png'), context),
-    ]);
-
-    // Load level buttons
-    for (int i = 1; i <= 32; i += 8) {
-      // Load 8 at a time
-      await Future.wait([
-        if (i <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/$i.png'), context),
-        if (i + 1 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 1}.png'),
-              context),
-        if (i + 2 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 2}.png'),
-              context),
-        if (i + 3 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 3}.png'),
-              context),
-        if (i + 4 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 4}.png'),
-              context),
-        if (i + 5 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 5}.png'),
-              context),
-        if (i + 6 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 6}.png'),
-              context),
-        if (i + 7 <= 32)
-          precacheImage(
-              AssetImage('assets/images/levels_incomplete/${i + 7}.png'),
-              context),
-      ]);
-    }
-
-    setState(() {
-      _areImagesLoaded = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _scrollToBottom();
-      });
-    });
   }
 
   @override
@@ -187,6 +153,7 @@ class _MapViewState extends State<MapView> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _preloadImages(); // Start preloading images
+      _scrollToLevel(_findLowestIncompleteLevel());  // Scroll to lowest incomplete level
 
       AssetImage('assets/images/mapback.jpg')
           .resolve(const ImageConfiguration())
@@ -234,146 +201,142 @@ class _MapViewState extends State<MapView> {
         children: [
           ScrollConfiguration(
             behavior: _scrollBehavior,
-            child: SingleChildScrollView(
-              physics: const ClampingScrollPhysics(),
-              controller: _scrollController,
-              child: Stack(
-                children: [
-                  // Map Background
-                  Image.asset(
-                    'assets/images/mapback.jpg',
-                    width: mapWidth,
-                    height: mapHeight,
-                    fit: BoxFit.fill,
-                    frameBuilder: (context, child, frame, _) {
-                      if (frame != null && !_isMapLoaded) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
+            child: SizedBox(  // Add fixed height container
+              height: MediaQuery.of(context).size.height,
+              child: SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                controller: _scrollController,
+                child: Stack(
+                  children: [
+                    // Base map image
+                    Image.asset(
+                      'assets/images/mapback.jpg',
+                      width: mapWidth,
+                      height: mapHeight,
+                      fit: BoxFit.fill,
+                      frameBuilder: (context, child, frame, _) {
+                        if (frame != null && !_isMapLoaded) {
                           setState(() {
-                            _isMapLoaded = true;
+                            _isMapLoaded = true;  // This should trigger overlay display
                           });
-                        });
-                      }
-                      return child;
-                    },
-                  ),
-
-                  // Section overlays
-                  if (_isMapLoaded) ...[
-                    // Section 1 (1-6)
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      child: Opacity(
-                        opacity: 0.4,
-                        child: Image.asset(
-                          'assets/images/mapback/1-6.png',
-                          width: mapWidth,
-                          height: mapHeight * 0.166,
-                          fit: BoxFit.fill,
-                        ),
-                      ),
+                        }
+                        return child;
+                      },
                     ),
 
-                    // Section 2 (7-12)
-                    Positioned(
-                      bottom: mapHeight * 0.143599000021581,
-                      left: 0,
-                      child: Opacity(
-                        opacity: 0.5,
-                        child: Image.asset(
-                          'assets/images/mapback/7-12.png',
-                          width: mapWidth,
-                          height: mapHeight * 0.173000000000000,
-                          fit: BoxFit.fill,
+                    // Section overlays
+                    if (_isMapLoaded) ...[
+                      // Section 1 (1-6)
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        child: Opacity(
+                          opacity: 0.4,
+                          child: Image.asset(
+                            'assets/images/mapback/1-6.png',
+                            width: mapWidth,
+                            height: mapHeight * 0.166,
+                            fit: BoxFit.fill,
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Section 3 (13-18)
-                    Positioned(
-                      bottom: mapHeight * overlay13Bottom,
-                      left: 0,
-                      child: Opacity(
-                        opacity: 0.4,
-                        child: Image.asset(
-                          'assets/images/mapback/13-18.png',
-                          width: mapWidth,
-                          height: mapHeight * overlay13Height,
-                          fit: BoxFit.fill,
+                      // Section 2 (7-12)
+                      Positioned(
+                        bottom: mapHeight * overlay7Bottom,
+                        left: 0,
+                        child: Opacity(
+                          opacity: 0.5,
+                          child: Image.asset(
+                            'assets/images/mapback/7-12.png',
+                            width: mapWidth,
+                            height: mapHeight * overlay7Height,
+                            fit: BoxFit.fill,
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Section 4 (19-24)
-                    Positioned(
-                      bottom: mapHeight * overlay19Bottom,
-                      left: 0,
-                      child: Opacity(
-                        opacity: 0.603,
-                        child: Image.asset(
-                          'assets/images/mapback/19-24.png',
-                          width: mapWidth,
-                          height: mapHeight * overlay19Height,
-                          fit: BoxFit.fill,
+                      // Section 3 (13-18)
+                      Positioned(
+                        bottom: mapHeight * overlay13Bottom,
+                        left: 0,
+                        child: Opacity(
+                          opacity: 0.4,
+                          child: Image.asset(
+                            'assets/images/mapback/13-18.png',
+                            width: mapWidth,
+                            height: mapHeight * overlay13Height,
+                            fit: BoxFit.fill,
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Section 5 (25-30)
-                    Positioned(
-                      bottom: mapHeight * overlay25Bottom,
-                      left: 0,
-                      child: Opacity(
-                        opacity: 0.4,
-                        child: Image.asset(
-                          'assets/images/mapback/25-30.png',
-                          width: mapWidth,
-                          height: mapHeight * overlay25Height,
-                          fit: BoxFit.fill,
+                      // Section 4 (19-24)
+                      Positioned(
+                        bottom: mapHeight * overlay19Bottom,
+                        left: 0,
+                        child: Opacity(
+                          opacity: 0.603,
+                          child: Image.asset(
+                            'assets/images/mapback/19-24.png',
+                            width: mapWidth,
+                            height: mapHeight * overlay19Height,
+                            fit: BoxFit.fill,
+                          ),
                         ),
                       ),
-                    ),
 
-                    // Section 6 (31-32)
-                    Positioned(
-                      bottom: mapHeight * overlay31Bottom,
-                      left: 0,
-                      child: Opacity(
-                        opacity: 0.603,
-                        child: Image.asset(
-                          'assets/images/mapback/31-32.png',
-                          width: mapWidth,
-                          height: mapHeight * overlay31Height,
-                          fit: BoxFit.fill,
+                      // Section 5 (25-30)
+                      Positioned(
+                        bottom: mapHeight * overlay25Bottom,
+                        left: 0,
+                        child: Opacity(
+                          opacity: 0.4,
+                          child: Image.asset(
+                            'assets/images/mapback/25-30.png',
+                            width: mapWidth,
+                            height: mapHeight * overlay25Height,
+                            fit: BoxFit.fill,
+                          ),
                         ),
                       ),
-                    ),
+
+                      // Section 6 (31-32)
+                      Positioned(
+                        bottom: mapHeight * overlay31Bottom,
+                        left: 0,
+                        child: Opacity(
+                          opacity: 0.603,
+                          child: Image.asset(
+                            'assets/images/mapback/31-32.png',
+                            width: mapWidth,
+                            height: mapHeight * overlay31Height,
+                            fit: BoxFit.fill,
+                          ),
+                        ),
+                      ),
+                    ],
+
+                    // Level Buttons
+                    for (int i = 0; i < levelPositions.length; i++)
+                      Positioned(
+                        left: mapWidth * levelPositions[i].x,
+                        top: mapHeight * (1 - levelPositions[i].y),  // Add back the 1 - levelY
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedLevel = i;
+                            });
+                          },
+                          child: Image.asset(
+                            'assets/images/levels_incomplete/${i + 1}.png',
+                            width: mapWidth * 0.1,
+                            height: mapWidth * 0.1,
+                          ),
+                        ),
+                      ),
                   ],
-
-                  // Level Buttons
-                  for (int i = 0; i < levelPositions.length; i++)
-                    Positioned(
-                      left: mapWidth * levelPositions[i].x,
-                      top: mapHeight * (1 - levelPositions[i].y),
-                      child: GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            _selectedLevel = i;
-                            // TODO: Implement level selection logic
-                          });
-                        },
-                        child: Column(
-                          children: [
-                            Image.asset(
-                              'assets/images/levels_incomplete/${i + 1}.png',
-                              width: mapWidth * 0.1,
-                              height: mapWidth * 0.1,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                ],
+                ),
               ),
             ),
           ),
@@ -407,14 +370,14 @@ class _MapViewState extends State<MapView> {
                     width: mapWidth * _levelGroundWidth,
                     fit: BoxFit.fitWidth,
                   ),
-                  // Target number image - add it here in the level info panel
+                  // Target number image
                   Positioned(
                     left: (mapWidth * _levelGroundWidth * _targetX) -
-                        ((mapWidth * _levelGroundWidth * _timerSize) / 2),
+                        ((mapWidth * _levelGroundWidth * _targetSize) / 2),  // Use targetSize
                     bottom: mapWidth * _levelGroundWidth * _timerY,
                     child: Image.asset(
                       'assets/images/target/${_getTargetNumber(_selectedLevel + 1)}.png',
-                      width: mapWidth * _levelGroundWidth * _timerSize,
+                      width: mapWidth * _levelGroundWidth * _targetSize,  // Use targetSize
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -468,17 +431,15 @@ class _MapViewState extends State<MapView> {
                       ),
                     ),
                   ),
-                  // Remove all the old adjustment buttons here
-                  // Just keep the level number display
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    child: Text(
-                      'Level ${_selectedLevel + 1}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  // Add this with other images in the level info panel
+                  Positioned(
+                    left: (mapWidth * _levelGroundWidth * _continueX) -
+                        ((mapWidth * _levelGroundWidth * _continueSize) / 2),
+                    bottom: mapWidth * _levelGroundWidth * _continueY,
+                    child: Image.asset(
+                      'assets/images/continue.png',
+                      width: mapWidth * _levelGroundWidth * _continueSize,
+                      fit: BoxFit.contain,
                     ),
                   ),
                 ],
