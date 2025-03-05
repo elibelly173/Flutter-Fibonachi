@@ -81,6 +81,11 @@ flutter:
     - assets/images/target/number5.png
     - assets/images/target/number10.png
     - assets/images/target/number20.png
+    - assets/images/game/
+    - assets/images/key/
+    - assets/images/achianim/
+    - assets/images/fibo/
+    - assets/images/GameBoard/Clock/v3/Clock/
 
   # To add assets to your application, add an assets section, like this:
   # assets:

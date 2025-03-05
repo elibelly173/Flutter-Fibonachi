@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'game_board.dart';  // Add this import
 
 class LevelPosition {
   final double x;
@@ -431,15 +432,24 @@ class _MapViewState extends State<MapView> {
                       ),
                     ),
                   ),
-                  // Add this with other images in the level info panel
+                  // Continue button
                   Positioned(
                     left: (mapWidth * _levelGroundWidth * _continueX) -
                         ((mapWidth * _levelGroundWidth * _continueSize) / 2),
                     bottom: mapWidth * _levelGroundWidth * _continueY,
-                    child: Image.asset(
-                      'assets/images/continue.png',
-                      width: mapWidth * _levelGroundWidth * _continueSize,
-                      fit: BoxFit.contain,
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => GameBoard(level: _selectedLevel + 1),
+                          ),
+                        );
+                      },
+                      child: Image.asset(
+                        'assets/images/continue.png',
+                        width: mapWidth * _levelGroundWidth * _continueSize,
+                        fit: BoxFit.contain,
+                      ),
                     ),
                   ),
                 ],
@@ -500,7 +510,6 @@ class _MapViewState extends State<MapView> {
       default:
         filename = 'number20';  // Default value
     }
-    print('Loading target image: assets/images/target/$filename.png');
     return filename;
   }
 }
