@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
 class GameBoard extends StatefulWidget {
   final int level;
@@ -17,12 +18,12 @@ class _GameBoardState extends State<GameBoard> {
   int rightCount = 0;
   int problemCount = 0;
   int wrongCount = 0;
-  
+
   // Time thresholds
-  int targetTime = 0;  // 3 stars time
-  int targetTime1 = 0; // 4 stars time 
+  int targetTime = 0; // 3 stars time
+  int targetTime1 = 0; // 4 stars time
   int targetTime2 = 0; // 1 star time
-  int levelTime = 0;   // 2 stars time
+  int levelTime = 0; // 2 stars time
   int prevTime = 0;
   double blueNumber = 0;
   List<String> problemAnswers = [];
@@ -31,13 +32,13 @@ class _GameBoardState extends State<GameBoard> {
   String answerString = "";
   int answer = 0;
   bool isNegative = false;
-  
+
   // Animation flags
   bool showingAnswer = false;
   bool dimFlag = false;
   bool firstEnterFlag = false;
-  
-  // Game mode flags  
+
+  // Game mode flags
   bool fractionMode = false;
   bool decimalMode = false;
   int axisMode = 0;
@@ -46,20 +47,20 @@ class _GameBoardState extends State<GameBoard> {
   List<int> selectedNumbers = [];
 
   // UI positioning constants
-  final double _homeButtonX = 0.1;  // Left side
-  final double _homeButtonY = 0.9;  // Near top
-  final double _homeButtonSize = 0.1;
+  double _homeButtonX = 0.08; // 8% from left
+  double _homeButtonY = 0.97; // 97% up from bottom
+  double _homeButtonSize = 0.08; // 8% of screen width
 
   // Grid layout constants
-  final double _gridWidth = 0.8;  // 80% of screen width
-  final double _gridHeight = 0.6;  // 60% of screen height
-  final double _gridY = 0.3;  // 30% from top
+  final double _gridWidth = 0.8; // 80% of screen width
+  final double _gridHeight = 0.6; // 60% of screen height
+  final double _gridY = 0.3; // 30% from top
 
   // Coconut constants
-  final double _coconutRowHeight = 0.12;    // 12% of screen height
-  final double _coconutRowBottom = 0.07;    // Changed from 0.02 to 0.07 (7% from bottom)
-  final double _coconutSize = 0.085;        // 8.5% of screen width
-  final double _coconutRowWidth = 0.85;     // 85% of screen width
+  double _coconutRowHeight = 0.08; // 8% of screen height
+  double _coconutRowBottom = 0.03; // 3% from bottom
+  double _coconutSize = 0.065; // 6.5% of screen width
+  final double _coconutRowWidth = 0.95; // 95% of screen width
 
   // Home button state
   bool _isHomePressed = false;
@@ -71,11 +72,89 @@ class _GameBoardState extends State<GameBoard> {
   late Image achiSprite;
   late Image fiboSprite;
 
+  // Add adjustment variables
+  double clockX = 0.15; // 15% from left
+  double clockY = 0.86; // 86% up from bottom
+  double clockSize = 0.05; // 5% of screen width
+
+  // Update initial score board values
+  double scoreX = 0.41; // 41% from left
+  double scoreY = 0.85; // 85% from bottom
+  double scoreSize = 0.2; // 20% of screen width
+
+  // Add at the top with other variables
+  Timer? _clockTimer;
+
   @override
   void initState() {
     super.initState();
     level = widget.level;
-    // Just initialize game state here, no widget building
+
+    // Start the clock timer
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        this.timer = (this.timer + 1) % 60; // Increment timer and wrap at 60
+      });
+    });
+  }
+
+  // Add dispose method to clean up the timer
+  @override
+  void dispose() {
+    _clockTimer?.cancel(); // Cancel timer first
+    super.dispose(); // Then call super.dispose()
+  }
+
+  // Update adjustment buttons to rebuild timer
+  Widget _buildAdjustmentButtons() {
+    return Positioned(
+      left: 20,
+      bottom: MediaQuery.of(context).size.height * 0.25,
+      child: Column(
+        children: [
+          Text('Clock:', style: TextStyle(fontWeight: FontWeight.bold)),
+          Row(
+            children: [
+              Text('X: ${clockX.toStringAsFixed(3)}'),
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: () => setState(() => clockX -= 0.01),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => setState(() => clockX += 0.01),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Text('Y: ${clockY.toStringAsFixed(3)}'),
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: () => setState(() => clockY -= 0.01),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => setState(() => clockY += 0.01),
+              ),
+            ],
+          ),
+          Row(
+            children: [
+              Text('Size: ${clockSize.toStringAsFixed(3)}'),
+              IconButton(
+                icon: const Icon(Icons.remove),
+                onPressed: () => setState(() => clockSize -= 0.01),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => setState(() => clockSize += 0.01),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -86,23 +165,22 @@ class _GameBoardState extends State<GameBoard> {
     return Scaffold(
       body: Stack(
         children: [
-          // Background
+          // Background - full screen
           Image.asset(
             'assets/images/gameboard.png',
             width: screenWidth,
             height: screenHeight,
-            fit: BoxFit.cover,
+            fit: BoxFit.fill, // Stretch to fill screen
           ),
 
-          // Timer and Score
           _buildTimerScore(),
-
-          // Answer Layer
           _buildAnswerLayer(),
+          _buildScoreBoard(), // Move after other layers
 
           // Home Button
           Positioned(
-            left: screenWidth * _homeButtonX - (screenWidth * _homeButtonSize / 2),
+            left: screenWidth * _homeButtonX -
+                (screenWidth * _homeButtonSize / 2),
             top: screenHeight * (1 - _homeButtonY),
             child: GestureDetector(
               onTapDown: (_) => setState(() => _isHomePressed = true),
@@ -112,7 +190,7 @@ class _GameBoardState extends State<GameBoard> {
               },
               onTapCancel: () => setState(() => _isHomePressed = false),
               child: Image.asset(
-                _isHomePressed 
+                _isHomePressed
                     ? 'assets/images/game/home_selected.png'
                     : 'assets/images/game/home.png',
                 width: screenWidth * _homeButtonSize,
@@ -126,6 +204,9 @@ class _GameBoardState extends State<GameBoard> {
 
           // Problem widgets
           ...problemWidgets,
+
+          // Add adjustment buttons
+          _buildAdjustmentButtons(),
         ],
       ),
     );
@@ -133,36 +214,51 @@ class _GameBoardState extends State<GameBoard> {
 
   // Add this method to build the number row
   Widget _buildCoconutNumberRow() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final rowWidth = screenWidth * _coconutRowWidth;
+
+    final totalCoconutWidth = 10 * screenWidth * _coconutSize;
+    final spacing = (rowWidth - totalCoconutWidth) / 9;
+
     return Positioned(
-      bottom: MediaQuery.of(context).size.height * _coconutRowBottom,
-      left: MediaQuery.of(context).size.width * ((1 - _coconutRowWidth) / 2),
-      width: MediaQuery.of(context).size.width * _coconutRowWidth,
-      height: MediaQuery.of(context).size.height * _coconutRowHeight,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      bottom: screenHeight * _coconutRowBottom,
+      left: screenWidth * ((1 - _coconutRowWidth) / 2),
+      width: rowWidth,
+      height:
+          screenHeight * _coconutRowHeight * 2, // Double the container height
+      child: Stack(
         children: [
           for (int i = 1; i <= 9; i++)
-            GestureDetector(
-              onTap: () {
-                print('Coconut number $i tapped');
-              },
-              child: Image.asset(
-                'assets/images/key/key$i.png',
-                width: MediaQuery.of(context).size.width * _coconutSize,
-                height: MediaQuery.of(context).size.width * _coconutSize,
-                fit: BoxFit.contain,
+            Positioned(
+              left: (i - 1) * (screenWidth * _coconutSize + spacing),
+              child: GestureDetector(
+                onTap: () {
+                  print('Coconut number $i tapped');
+                },
+                child: Image.asset(
+                  'assets/images/key/key$i.png',
+                  width: screenWidth * _coconutSize,
+                  height: screenWidth *
+                      _coconutSize, // Make height match width for square aspect ratio
+                  fit: BoxFit.contain,
+                ),
               ),
             ),
           // Add 0 at the end
-          GestureDetector(
-            onTap: () {
-              print('Coconut number 0 tapped');
-            },
-            child: Image.asset(
-              'assets/images/key/key10.png',
-              width: MediaQuery.of(context).size.width * _coconutSize,
-              height: MediaQuery.of(context).size.width * _coconutSize,
-              fit: BoxFit.contain,
+          Positioned(
+            left: 9 * (screenWidth * _coconutSize + spacing),
+            child: GestureDetector(
+              onTap: () {
+                print('Coconut number 0 tapped');
+              },
+              child: Image.asset(
+                'assets/images/key/key10.png',
+                width: screenWidth * _coconutSize,
+                height: screenWidth *
+                    _coconutSize, // Make height match width for square aspect ratio
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ],
@@ -170,72 +266,44 @@ class _GameBoardState extends State<GameBoard> {
     );
   }
 
-  // Convert initTimerScore to a widget builder
+  // Replace _buildTimerScore with this simpler version
   Widget _buildTimerScore() {
-    return Stack(
-      children: [
-        // Base dial
-        Positioned(
-          left: MediaQuery.of(context).size.width * 0.2,
-          top: MediaQuery.of(context).size.height - MediaQuery.of(context).size.width * 0.038,
-          child: Image.asset(
-            'assets/images/GameBoard/Clock/v3/Clock/dial.png',
-            scale: MediaQuery.of(context).size.width * 0.00035,
-          ),
-        ),
-        // Dial lines (tick marks)
-        Positioned(
-          left: MediaQuery.of(context).size.width * 0.2,
-          top: MediaQuery.of(context).size.height - MediaQuery.of(context).size.width * 0.038,
-          child: Image.asset(
-            'assets/images/GameBoard/Clock/v3/Clock/dial lines.png',
-            scale: MediaQuery.of(context).size.width * 0.00035,
-          ),
-        ),
-        // Outer circle
-        Positioned(
-          left: MediaQuery.of(context).size.width * 0.2,
-          top: MediaQuery.of(context).size.height - MediaQuery.of(context).size.width * 0.038,
-          child: Image.asset(
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    
+    return Positioned(
+      left: screenWidth * clockX,
+      bottom: screenHeight * clockY,
+      child: Stack(
+        children: [
+          // Base circle (bottom layer)
+          Image.asset(
             'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png',
-            scale: MediaQuery.of(context).size.width * 0.00035,
+            width: screenWidth * clockSize,
+            fit: BoxFit.contain,
           ),
-        ),
-        // Color overlay (changes based on time)
-        Positioned(
-          left: MediaQuery.of(context).size.width * 0.2,
-          top: MediaQuery.of(context).size.height - MediaQuery.of(context).size.width * 0.038,
-          child: Image.asset(
-            'assets/images/GameBoard/Clock/v3/Clock/Blue.png', // Will change based on time
-            scale: MediaQuery.of(context).size.width * 0.00035,
+          // Dial lines (middle layer)
+          Image.asset(
+            'assets/images/GameBoard/Clock/v3/Clock/Dial Lines.png',
+            width: screenWidth * clockSize,
+            fit: BoxFit.contain,
           ),
-        ),
-        // Timer needle
-        Positioned(
-          left: MediaQuery.of(context).size.width * 0.2,
-          top: MediaQuery.of(context).size.height - MediaQuery.of(context).size.width * 0.038,
-          child: Transform.rotate(
-            angle: targetTime > 0 ? (timer / targetTime) * 2 * 3.14159 : 0, // Add safety check
-            child: Image.asset(
-              'assets/images/GameBoard/Clock/v3/Clock/timer_needle.png',
-              scale: MediaQuery.of(context).size.width * 0.00035,
+          // Clock hand (top layer)
+          Positioned(
+            left: screenWidth * clockSize * 0.5,    // Center of clock horizontally
+            top: 0,                                 // Position so bottom is at center
+            child: Transform.rotate(
+              angle: timer * 2 * 3.14159 / 60,     // Restore animation
+              alignment: Alignment.bottomCenter,     // Keep pivoting around bottom of dial
+              child: Image.asset(
+                'assets/images/GameBoard/Clock/v3/Clock/Dial.png',
+                width: screenWidth * clockSize * 0.055,  // 5.5% of clock size
+                fit: BoxFit.contain,
+              ),
             ),
           ),
-        ),
-        // Score display
-        Positioned(
-          left: MediaQuery.of(context).size.width * 0.5,
-          top: MediaQuery.of(context).size.height - MediaQuery.of(context).size.width * 0.06,
-          child: Text(
-            score.toString(),
-            style: TextStyle(
-              color: Colors.black,
-              fontSize: MediaQuery.of(context).size.width * 0.035,
-              fontFamily: 'Yesterday Dream',
-            ),
-          ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -244,7 +312,8 @@ class _GameBoardState extends State<GameBoard> {
     if (fractionMode && !decimalMode) {
       return Positioned(
         left: MediaQuery.of(context).size.width * 0.75,
-        top: MediaQuery.of(context).size.height * 0.2 + MediaQuery.of(context).size.width * 0.08,
+        top: MediaQuery.of(context).size.height * 0.2 +
+            MediaQuery.of(context).size.width * 0.08,
         child: Opacity(
           opacity: 0,
           child: Container(), // Temporary placeholder
@@ -254,8 +323,10 @@ class _GameBoardState extends State<GameBoard> {
       // Decimal answer layer
       return Positioned(
         left: MediaQuery.of(context).size.width * 0.66,
-        top: MediaQuery.of(context).size.height * 0.2 + MediaQuery.of(context).size.width * 0.17,
-        child: Container( // Add Container with fixed size
+        top: MediaQuery.of(context).size.height * 0.2 +
+            MediaQuery.of(context).size.width * 0.17,
+        child: Container(
+          // Add Container with fixed size
           width: MediaQuery.of(context).size.width * 0.2,
           height: MediaQuery.of(context).size.height * 0.1,
           child: Column(
@@ -283,7 +354,8 @@ class _GameBoardState extends State<GameBoard> {
       // Regular number answer layer
       return Positioned(
         left: MediaQuery.of(context).size.width * 0.66,
-        top: MediaQuery.of(context).size.height * 0.3 + MediaQuery.of(context).size.width * 0.13,
+        top: MediaQuery.of(context).size.height * 0.3 +
+            MediaQuery.of(context).size.width * 0.13,
         child: Text(
           '',
           style: TextStyle(
@@ -306,7 +378,7 @@ class _GameBoardState extends State<GameBoard> {
 
   double calculateScore() {
     double subtract = (timer - prevTime) / 10.0;
-    
+
     if (subtract <= blueNumber / 3.0) {
       return 500;
     } else if (subtract > blueNumber / 3.0 && subtract < 3.536 * blueNumber) {
@@ -324,7 +396,7 @@ class _GameBoardState extends State<GameBoard> {
         width: MediaQuery.of(context).size.width * 0.22,
       );
     });
-    
+
     // Animate through frames
     for (int i = 1; i <= 10; i++) {
       Future.delayed(Duration(milliseconds: 80 * i), () {
@@ -346,7 +418,7 @@ class _GameBoardState extends State<GameBoard> {
         width: MediaQuery.of(context).size.width * 0.15,
       );
     });
-    
+
     // Animate through frames
     for (int i = 0; i < 14; i++) {
       Future.delayed(Duration(milliseconds: 50 * i), () {
@@ -375,7 +447,7 @@ class _GameBoardState extends State<GameBoard> {
 
   void animateProblemTransition() {
     if (rightCount >= problemWidgets.length) return;
-    
+
     final currentProblem = problemWidgets[rightCount];
     final problemWithBubble = Stack(
       children: [
@@ -403,7 +475,8 @@ class _GameBoardState extends State<GameBoard> {
         duration: const Duration(milliseconds: 50),
         curve: Curves.easeOut,
         left: MediaQuery.of(context).size.width * 0.34,
-        top: MediaQuery.of(context).size.height * 0.74 - MediaQuery.of(context).size.width * 0.085,
+        top: MediaQuery.of(context).size.height * 0.74 -
+            MediaQuery.of(context).size.width * 0.085,
         child: AnimatedOpacity(
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeIn,
@@ -442,9 +515,11 @@ class _GameBoardState extends State<GameBoard> {
           duration: const Duration(milliseconds: 400),
           curve: Curves.easeInOut,
           left: MediaQuery.of(context).size.width * 0.52,
-          top: fractionMode 
-              ? MediaQuery.of(context).size.height * 0.2 + MediaQuery.of(context).size.width * 0.08
-              : MediaQuery.of(context).size.height * 0.2 + MediaQuery.of(context).size.width * 0.04,
+          top: fractionMode
+              ? MediaQuery.of(context).size.height * 0.2 +
+                  MediaQuery.of(context).size.width * 0.08
+              : MediaQuery.of(context).size.height * 0.2 +
+                  MediaQuery.of(context).size.width * 0.04,
           child: AnimatedOpacity(
             duration: const Duration(milliseconds: 400),
             opacity: 1.0,
@@ -461,4 +536,20 @@ class _GameBoardState extends State<GameBoard> {
       // Will implement actual problem generation later
     });
   }
-} 
+
+  // Update score board display method
+  Widget _buildScoreBoard() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    return Positioned(
+      left: screenWidth * scoreX,
+      bottom: screenHeight * scoreY,
+      child: Image.asset(
+        'assets/images/game/Score.png',
+        width: screenWidth * scoreSize,
+        fit: BoxFit.contain,
+      ),
+    );
+  }
+}

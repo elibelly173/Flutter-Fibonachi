@@ -29,8 +29,37 @@ class MathPracticeApp extends StatelessWidget {
   }
 }
 
-class StartScreen extends StatelessWidget {
+class StartScreen extends StatefulWidget {
   const StartScreen({super.key});
+
+  @override
+  State<StartScreen> createState() => _StartScreenState();
+}
+
+class _StartScreenState extends State<StartScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // Precache images
+    precacheImage(const AssetImage('assets/images/start.png'), context);
+    precacheImage(
+        const AssetImage(
+            'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png'),
+        context);
+    precacheImage(
+        const AssetImage(
+            'assets/images/GameBoard/Clock/v3/Clock/Dial Lines.png'),
+        context);
+    precacheImage(
+        const AssetImage('assets/images/GameBoard/Clock/v3/Clock/Dial.png'),
+        context);
+
+    // Precache number keys
+    for (int i = 1; i <= 9; i++) {
+      precacheImage(AssetImage('assets/images/key/key$i.png'), context);
+    }
+    precacheImage(const AssetImage('assets/images/key/key10.png'), context);
+  }
 
   @override
   Widget build(BuildContext context) {
