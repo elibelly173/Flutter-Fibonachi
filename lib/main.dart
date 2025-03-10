@@ -40,25 +40,29 @@ class _StartScreenState extends State<StartScreen> {
   @override
   void initState() {
     super.initState();
-    // Precache images
-    precacheImage(const AssetImage('assets/images/start.png'), context);
-    precacheImage(
-        const AssetImage(
-            'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png'),
-        context);
-    precacheImage(
-        const AssetImage(
-            'assets/images/GameBoard/Clock/v3/Clock/Dial Lines.png'),
-        context);
-    precacheImage(
-        const AssetImage('assets/images/GameBoard/Clock/v3/Clock/Dial.png'),
-        context);
+    
+    // Move precaching to after the first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Precache images
+      precacheImage(const AssetImage('assets/images/start.png'), context);
+      precacheImage(
+          const AssetImage(
+              'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png'),
+          context);
+      precacheImage(
+          const AssetImage(
+              'assets/images/GameBoard/Clock/v3/Clock/Dial Lines.png'),
+          context);
+      precacheImage(
+          const AssetImage('assets/images/GameBoard/Clock/v3/Clock/Dial.png'),
+          context);
 
-    // Precache number keys
-    for (int i = 1; i <= 9; i++) {
-      precacheImage(AssetImage('assets/images/key/key$i.png'), context);
-    }
-    precacheImage(const AssetImage('assets/images/key/key10.png'), context);
+      // Precache number keys
+      for (int i = 1; i <= 9; i++) {
+        precacheImage(AssetImage('assets/images/key/key$i.png'), context);
+      }
+      precacheImage(const AssetImage('assets/images/key/key10.png'), context);
+    });
   }
 
   @override

@@ -84,9 +84,13 @@ flutter:
     - assets/images/game/
     - assets/images/key/
     - assets/images/achianim/
-    - assets/images/fibo/
+    - assets/images/fibo/fibo.png
     - assets/images/GameBoard/Clock/v3/Clock/
     - assets/images/game/Score.png
+    - assets/images/tree5/
+    - assets/images/tree10/
+    - assets/images/tree20/
+    - assets/images/tree80/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
