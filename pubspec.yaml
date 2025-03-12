@@ -83,7 +83,7 @@ flutter:
     - assets/images/target/number20.png
     - assets/images/game/
     - assets/images/key/
-    - assets/images/achianim/
+    - assets/images/achianim/achianim.png
     - assets/images/fibo/fibo.png
     - assets/images/GameBoard/Clock/v3/Clock/
     - assets/images/game/Score.png

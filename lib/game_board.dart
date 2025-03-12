@@ -19,6 +19,20 @@ class FiboFrame {
   });
 }
 
+class AchiFrame {
+  final Rect textureRect;
+  final bool rotated;
+  final Size sourceSize;
+  final Offset spriteOffset;
+
+  AchiFrame({
+    required this.textureRect,
+    required this.rotated,
+    required this.sourceSize,
+    required this.spriteOffset,
+  });
+}
+
 class FiboSpritePainter extends CustomPainter {
   final ui.Image sprite;
   final FiboFrame frame;
@@ -54,6 +68,64 @@ class FiboSpritePainter extends CustomPainter {
   }
 }
 
+class AchiSpritePainter extends CustomPainter {
+  final ui.Image sprite;
+  final AchiFrame frame;
+  final Size spriteSheetSize;
+
+  AchiSpritePainter({
+    required this.sprite,
+    required this.frame,
+    required this.spriteSheetSize,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    print('Painting Achi:');
+    print('- Frame rect: ${frame.textureRect}');
+    print('- Frame size: ${frame.textureRect.size}');
+    print('- Widget size: $size');
+    print('- Rotated: ${frame.rotated}');
+    print('- Source size: ${frame.sourceSize}');
+    print('- Sprite offset: ${frame.spriteOffset}');
+
+    canvas.save();
+
+    if (frame.rotated) {
+      // Move to center, rotate 90 degrees, move back
+      canvas.translate(size.width / 2, size.height / 2);
+      canvas.rotate(-pi / 2); // Back to original rotation
+      canvas.translate(-size.height / 2, -size.width / 2);
+
+      // Draw rotated frame with swapped dimensions
+      canvas.drawImageRect(
+        sprite,
+        frame.textureRect,
+        Rect.fromLTWH(0, 0, size.height, size.width), // Swap dimensions
+        Paint(),
+      );
+    } else {
+      // Draw normally
+      canvas.drawImageRect(
+        sprite,
+        frame.textureRect,
+        Rect.fromLTWH(0, 0, size.width, size.height),
+        Paint(),
+      );
+    }
+
+    canvas.restore();
+  }
+
+  @override
+  bool shouldRepaint(AchiSpritePainter oldDelegate) {
+    if (oldDelegate.frame == frame && oldDelegate.sprite == sprite) {
+      return false;
+    }
+    return true;
+  }
+}
+
 class GameBoard extends StatefulWidget {
   final int level;
 
@@ -63,8 +135,7 @@ class GameBoard extends StatefulWidget {
   State<GameBoard> createState() => _GameBoardState();
 }
 
-class _GameBoardState extends State<GameBoard>
-    with SingleTickerProviderStateMixin {
+class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   // Game state
   late int level;
   int timer = 0;
@@ -275,12 +346,38 @@ class _GameBoardState extends State<GameBoard>
     });
   }
 
+  Future<void> _loadAchiSprite() async {
+    if (!mounted) return;
+
+    print('Loading Achi sprite...');
+    try {
+      final data = await rootBundle.load('assets/images/achianim/achianim.png');
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+
+      if (!mounted) return;
+
+      // Force a rebuild after setting sprite
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _achiSprite = frame.image;
+          print(
+              'Set _achiSprite in state with size: ${frame.image.width}x${frame.image.height}');
+        });
+      });
+    } catch (e) {
+      print('Error loading Achi sprite: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     level = widget.level;
     _setTreeType();
     _loadFiboSprite();
+    _loadAchiSprite();
 
     // Initialize tree after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -304,9 +401,20 @@ class _GameBoardState extends State<GameBoard>
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..addListener(() {
-        if (!mounted) return;
+        if (!mounted) return; // Check if mounted before setState
         setState(() {
           _currentFrame = (_fiboController.value * 13).floor();
+        });
+      });
+
+    // Add Achi animation controller - 80ms per frame * 10 frames = 800ms total
+    _achiController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    )..addListener(() {
+        if (!mounted) return;
+        setState(() {
+          _currentAchiFrame = (_achiController.value * 9).floor() + 1;
         });
       });
   }
@@ -353,6 +461,7 @@ class _GameBoardState extends State<GameBoard>
   @override
   void dispose() {
     _fiboController.dispose();
+    _achiController.dispose();
     _isDisposed = true;
     _clockTimer?.cancel();
     super.dispose();
@@ -462,7 +571,28 @@ class _GameBoardState extends State<GameBoard>
               ),
             ),
 
-          _buildFiboControls(),
+          // Updated Achi display
+          if (_achiSprite != null)
+            Positioned(
+              left: MediaQuery.of(context).size.width * achiX,
+              bottom: MediaQuery.of(context).size.height * achiY +
+                  achiFrames[_currentAchiFrame]!.spriteOffset.dy,
+              child: ClipRect(
+                child: CustomPaint(
+                  size: Size(
+                    MediaQuery.of(context).size.width * achiSize,
+                    MediaQuery.of(context).size.width * achiSize,
+                  ),
+                  painter: AchiSpritePainter(
+                    sprite: _achiSprite!,
+                    frame: achiFrames[_currentAchiFrame]!,
+                    spriteSheetSize: const Size(502, 428),
+                  ),
+                ),
+              ),
+            ),
+
+          _buildAchiControls(),
         ],
       ),
     );
@@ -865,7 +995,99 @@ class _GameBoardState extends State<GameBoard>
     return 1.0; // Placeholder return, actual implementation needed
   }
 
-  Widget _buildFiboControls() {
+  // Add near other state variables
+  double achiX = 0.155; // Initial X position
+  double achiY = 0.22; // Initial Y position
+  double achiSize = 0.11; // Keep current size
+  ui.Image? _achiSprite; // For sprite sheet
+
+  // Add with other frame data
+  final Map<int, AchiFrame> achiFrames = {
+    1: AchiFrame(
+      textureRect: Rect.fromLTWH(353, 1, 137, 126),
+      rotated: true,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(9, -12),
+    ),
+    2: AchiFrame(
+      textureRect: Rect.fromLTWH(193, 1, 158, 121),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(21, -19),
+    ),
+    3: AchiFrame(
+      textureRect: Rect.fromLTWH(1, 122, 158, 129),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(15, -13),
+    ),
+    4: AchiFrame(
+      textureRect: Rect.fromLTWH(160, 258, 158, 143),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(2, -4),
+    ),
+    5: AchiFrame(
+      textureRect: Rect.fromLTWH(320, 274, 156, 153),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(-4, 1),
+    ),
+    6: AchiFrame(
+      textureRect: Rect.fromLTWH(1, 253, 160, 157),
+      rotated: true,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(5, 2),
+    ),
+    7: AchiFrame(
+      textureRect: Rect.fromLTWH(357, 129, 144, 143),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(8, -4),
+    ),
+    8: AchiFrame(
+      textureRect: Rect.fromLTWH(161, 129, 194, 127),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(-3, -12),
+    ),
+    9: AchiFrame(
+      textureRect: Rect.fromLTWH(1, 1, 190, 119),
+      rotated: false,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(5, -18),
+    ),
+    10: AchiFrame(
+      textureRect: Rect.fromLTWH(353, 1, 137, 126),
+      rotated: true,
+      sourceSize: const Size(200, 161),
+      spriteOffset: const Offset(9, -12),
+    ),
+  };
+
+  // Update sprite sheet size constant
+  final Size achiSpriteSheetSize = const Size(502, 428);
+
+  // Add in _GameBoardState class
+  late AnimationController _achiController;
+  int _currentAchiFrame = 1;
+
+  // Add method to start animation
+  void _startAchiAnimation() {
+    if (!mounted) return;
+    _achiController.forward(from: 0);
+  }
+
+  // Add method to set specific frame
+  void _setAchiFrame(int frame) {
+    if (!mounted) return;
+    setState(() {
+      _currentAchiFrame = frame.clamp(1, 10); // Keep between 1-10
+    });
+  }
+
+  // Update _buildAchiControls to add frame controls
+  Widget _buildAchiControls() {
     return Center(
       child: Container(
         padding: const EdgeInsets.all(8),
@@ -873,79 +1095,108 @@ class _GameBoardState extends State<GameBoard>
           color: Colors.white.withOpacity(0.8),
           borderRadius: BorderRadius.circular(8),
         ),
-        child: Row(
+        child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Fibo X control
-            Column(
+            // Position controls
+            Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Fibo X: ${fiboX.toStringAsFixed(3)}'),
-                Row(
+                Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tight(Size(24, 24)),
-                      icon: const Icon(Icons.remove, size: 18),
-                      onPressed: () => setState(() => fiboX -= 0.001),
+                    Text('Achi X: ${achiX.toStringAsFixed(3)}'),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () => setState(() => achiX -= 0.01),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () => setState(() => achiX += 0.01),
+                        ),
+                      ],
                     ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tight(Size(24, 24)),
-                      icon: const Icon(Icons.add, size: 18),
-                      onPressed: () => setState(() => fiboX += 0.001),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Achi Y: ${achiY.toStringAsFixed(3)}'),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () => setState(() => achiY -= 0.01),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () => setState(() => achiY += 0.01),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Achi Size: ${achiSize.toStringAsFixed(3)}'),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () => setState(() => achiSize -= 0.01),
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () => setState(() => achiSize += 0.01),
+                        ),
+                      ],
                     ),
                   ],
                 ),
               ],
             ),
-            const SizedBox(width: 8),
-            // Fibo Y control
-            Column(
+            const SizedBox(height: 8),
+            // Frame controls
+            Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Fibo Y: ${fiboY.toStringAsFixed(3)}'),
-                Row(
-                  children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tight(Size(24, 24)),
-                      icon: const Icon(Icons.remove, size: 18),
-                      onPressed: () => setState(() => fiboY -= 0.001),
-                    ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tight(Size(24, 24)),
-                      icon: const Icon(Icons.add, size: 18),
-                      onPressed: () => setState(() => fiboY += 0.001),
-                    ),
-                  ],
+                Text('Frame: $_currentAchiFrame'),
+                const SizedBox(width: 8),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tight(Size(24, 24)),
+                  icon: const Icon(Icons.chevron_left, size: 18),
+                  onPressed: () => _setAchiFrame(_currentAchiFrame - 1),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tight(Size(24, 24)),
+                  icon: const Icon(Icons.chevron_right, size: 18),
+                  onPressed: () => _setAchiFrame(_currentAchiFrame + 1),
                 ),
               ],
             ),
-            const SizedBox(width: 8),
-            // Fibo size control
-            Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text('Fibo Size: ${fiboSize.toStringAsFixed(3)}'),
-                Row(
-                  children: [
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tight(Size(24, 24)),
-                      icon: const Icon(Icons.remove, size: 18),
-                      onPressed: () => setState(() => fiboSize -= 0.001),
-                    ),
-                    IconButton(
-                      padding: EdgeInsets.zero,
-                      constraints: BoxConstraints.tight(Size(24, 24)),
-                      icon: const Icon(Icons.add, size: 18),
-                      onPressed: () => setState(() => fiboSize += 0.001),
-                    ),
-                  ],
-                ),
-              ],
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _startAchiAnimation,
+              child: const Text('Test Animation'),
             ),
           ],
         ),
