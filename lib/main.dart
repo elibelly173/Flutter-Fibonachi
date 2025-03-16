@@ -4,6 +4,7 @@ import 'package:math_practice/map_view.dart';
 // import 'screens/asset_test_screen.dart';  // Comment this out or remove it
 
 void main() {
+  // Keep this initialization code
   WidgetsFlutterBinding.ensureInitialized();
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.landscapeLeft,

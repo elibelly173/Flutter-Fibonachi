@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.6.0
+  sdk: '>=3.0.6 <4.0.0'
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -33,7 +33,7 @@ dependencies:
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
+  cupertino_icons: ^1.0.2
 
 dev_dependencies:
   flutter_test:
@@ -44,7 +44,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^2.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -54,12 +54,24 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/images/mapback/
     - assets/images/
-    - assets/images/contents/
+    - assets/images/start.png
+    - assets/images/mapback.jpg
+    - assets/images/mapback/
+    - assets/images/levels_incomplete/
+    - assets/images/level_ground.png
     - assets/images/level/
-    - assets/images/timer/
     - assets/images/target/
+    - assets/images/contents/
+    - assets/images/timer/
+    - assets/images/close.png
+    - assets/images/continue.png
+    - assets/images/gameboard.png
+    - assets/images/key/
+    - assets/images/achianim/achianim.png
+    - assets/images/fibo/
+    - assets/images/GameBoard/Clock/v3/Clock/
+    - assets/images/game/Score.png
     - assets/images/levels_complete/
     - assets/images/levels_incomplete/
     # Level incomplete images
@@ -82,11 +94,15 @@ flutter:
     - assets/images/target/number10.png
     - assets/images/target/number20.png
     - assets/images/game/
-    - assets/images/key/
-    - assets/images/achianim/achianim.png
-    - assets/images/fibo/fibo.png
-    - assets/images/GameBoard/Clock/v3/Clock/
-    - assets/images/game/Score.png
+    - assets/images/achianim/frame1.png
+    - assets/images/achianim/frame2.png
+    - assets/images/achianim/frame3.png
+    - assets/images/achianim/frame4.png
+    - assets/images/achianim/frame5.png
+    - assets/images/achianim/frame6.png
+    - assets/images/achianim/frame7.png
+    - assets/images/achianim/frame8.png
+    - assets/images/achianim/frame9.png
     - assets/images/tree5/
     - assets/images/tree10/
     - assets/images/tree20/

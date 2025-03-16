@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:math' show pi;
+import 'dart:math' show pi, min;
 import 'dart:ui' as ui;
 import 'package:flutter/services.dart' show rootBundle;
+import 'achi_sprite.dart';
+import 'dart:io';
 
 // Add at the top of the file after imports
 class FiboFrame {
@@ -37,34 +39,112 @@ class FiboSpritePainter extends CustomPainter {
   final ui.Image sprite;
   final FiboFrame frame;
   final Size spriteSheetSize;
+  final bool preserveAspectRatio;
 
   FiboSpritePainter({
     required this.sprite,
     required this.frame,
     required this.spriteSheetSize,
+    this.preserveAspectRatio = true, // Default to preserving aspect ratio
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     canvas.save();
 
-    // Draw the frame directly without scaling or offsets first
-    canvas.drawImageRect(
-      sprite,
-      frame.textureRect,
-      Rect.fromLTWH(0, 0, size.width, size.height),
-      Paint(),
-    );
+    if (frame.rotated) {
+      // Get frame dimensions
+      final frameWidth = frame.textureRect.height;
+      final frameHeight = frame.textureRect.width;
+
+      if (preserveAspectRatio) {
+        // Calculate aspect ratio
+        final aspectRatio = frameWidth / frameHeight;
+
+        // Determine which dimension to fit to
+        final fitToHeight = aspectRatio > 1.0;
+
+        final targetWidth =
+            fitToHeight ? size.height * aspectRatio : size.width;
+        final targetHeight =
+            fitToHeight ? size.height : size.width / aspectRatio;
+
+        // Calculate offsets to center
+        final xOffset = (size.width - targetWidth) / 2;
+        final yOffset = (size.height - targetHeight) / 2;
+
+        // Move to center, rotate, and position
+        canvas.translate(size.width / 2, size.height / 2);
+        canvas.rotate(-pi / 2);
+        canvas.translate(-size.height / 2, -size.width / 2);
+
+        // Draw with preserved aspect ratio
+        canvas.drawImageRect(
+          sprite,
+          frame.textureRect,
+          Rect.fromLTWH(0, 0, targetHeight, targetWidth),
+          Paint(),
+        );
+      } else {
+        // Original rotation code
+        canvas.translate(size.width / 2, size.height / 2);
+        canvas.rotate(-pi / 2);
+        canvas.translate(-size.height / 2, -size.width / 2);
+        canvas.drawImageRect(
+          sprite,
+          frame.textureRect,
+          Rect.fromLTWH(0, 0, size.height, size.width),
+          Paint(),
+        );
+      }
+    } else {
+      // Handle non-rotated frames
+      if (preserveAspectRatio) {
+        // Get frame dimensions
+        final frameWidth = frame.textureRect.width;
+        final frameHeight = frame.textureRect.height;
+
+        // Calculate aspect ratio
+        final aspectRatio = frameWidth / frameHeight;
+
+        // Determine which dimension to fit to
+        final fitToHeight = aspectRatio > 1.0;
+
+        final targetWidth =
+            fitToHeight ? size.height * aspectRatio : size.width;
+        final targetHeight =
+            fitToHeight ? size.height : size.width / aspectRatio;
+
+        // Calculate offsets to center
+        final xOffset = (size.width - targetWidth) / 2;
+        final yOffset = (size.height - targetHeight) / 2;
+
+        // Draw with preserved aspect ratio
+        canvas.drawImageRect(
+          sprite,
+          frame.textureRect,
+          Rect.fromLTWH(xOffset, yOffset, targetWidth, targetHeight),
+          Paint(),
+        );
+      } else {
+        // Original drawing code
+        canvas.drawImageRect(
+          sprite,
+          frame.textureRect,
+          Rect.fromLTWH(0, 0, size.width, size.height),
+          Paint(),
+        );
+      }
+    }
 
     canvas.restore();
   }
 
   @override
   bool shouldRepaint(FiboSpritePainter oldDelegate) {
-    if (oldDelegate.frame == frame && oldDelegate.sprite == sprite) {
-      return false;
-    }
-    return true;
+    return oldDelegate.frame != frame ||
+        oldDelegate.sprite != sprite ||
+        oldDelegate.preserveAspectRatio != preserveAspectRatio;
   }
 }
 
@@ -72,44 +152,78 @@ class AchiSpritePainter extends CustomPainter {
   final ui.Image sprite;
   final AchiFrame frame;
   final Size spriteSheetSize;
+  final bool preserveAspectRatio;
 
   AchiSpritePainter({
     required this.sprite,
     required this.frame,
     required this.spriteSheetSize,
+    this.preserveAspectRatio = true, // Default to preserving aspect ratio
   });
 
   @override
   void paint(Canvas canvas, Size size) {
-    print('Painting Achi:');
-    print('- Frame rect: ${frame.textureRect}');
-    print('- Frame size: ${frame.textureRect.size}');
-    print('- Widget size: $size');
-    print('- Rotated: ${frame.rotated}');
-    print('- Source size: ${frame.sourceSize}');
-    print('- Sprite offset: ${frame.spriteOffset}');
-
     canvas.save();
 
     if (frame.rotated) {
-      // Move to center, rotate 90 degrees, move back
+      // For rotated frames, we need a different approach
+      // First get the dimensions of the frame
+      final frameWidth = frame.textureRect.height;
+      final frameHeight = frame.textureRect.width;
+
+      // Calculate the scale to fit the frame in the container
+      // while preserving aspect ratio
+      final scaleWidth = size.width / frameHeight;
+      final scaleHeight = size.height / frameWidth;
+      final scale = min(scaleWidth, scaleHeight);
+
+      // Calculate the dimensions of the scaled frame
+      final scaledWidth = frameHeight * scale;
+      final scaledHeight = frameWidth * scale;
+
+      // Calculate the position to center the frame
+      final left = (size.width - scaledWidth) / 2;
+      final top = (size.height - scaledHeight) / 2;
+
+      // Translate to the center of the container
       canvas.translate(size.width / 2, size.height / 2);
-      canvas.rotate(-pi / 2); // Back to original rotation
+      // Rotate
+      canvas.rotate(-pi / 2);
+      // Translate back, but with dimensions swapped due to rotation
       canvas.translate(-size.height / 2, -size.width / 2);
 
-      // Draw rotated frame with swapped dimensions
+      // Draw the rotated frame
       canvas.drawImageRect(
         sprite,
         frame.textureRect,
-        Rect.fromLTWH(0, 0, size.height, size.width), // Swap dimensions
+        Rect.fromLTWH(0, 0, scaledHeight, scaledWidth),
         Paint(),
       );
     } else {
-      // Draw normally
+      // For non-rotated frames
+      // Get the dimensions of the frame
+      final frameWidth = frame.textureRect.width;
+      final frameHeight = frame.textureRect.height;
+
+      // Calculate the scale to fit the frame in the container
+      // while preserving aspect ratio
+      final scaleWidth = size.width / frameWidth;
+      final scaleHeight = size.height / frameHeight;
+      final scale = min(scaleWidth, scaleHeight);
+
+      // Calculate the dimensions of the scaled frame
+      final scaledWidth = frameWidth * scale;
+      final scaledHeight = frameHeight * scale;
+
+      // Calculate the position to center the frame
+      final left = (size.width - scaledWidth) / 2;
+      final top = (size.height - scaledHeight) / 2;
+
+      // Draw the frame
       canvas.drawImageRect(
         sprite,
         frame.textureRect,
-        Rect.fromLTWH(0, 0, size.width, size.height),
+        Rect.fromLTWH(left, top, scaledWidth, scaledHeight),
         Paint(),
       );
     }
@@ -119,10 +233,9 @@ class AchiSpritePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(AchiSpritePainter oldDelegate) {
-    if (oldDelegate.frame == frame && oldDelegate.sprite == sprite) {
-      return false;
-    }
-    return true;
+    return oldDelegate.frame != frame ||
+        oldDelegate.sprite != sprite ||
+        oldDelegate.preserveAspectRatio != preserveAspectRatio;
   }
 }
 
@@ -172,9 +285,9 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   List<int> selectedNumbers = [];
 
   // UI positioning constants
-  double _homeButtonX = 0.08; // 8% from left
-  double _homeButtonY = 0.97; // 97% up from bottom
-  double _homeButtonSize = 0.08; // 8% of screen width
+  double _homeButtonX = 0.05; // 5% from left
+  double _homeButtonY = 0.03; // 3% from top
+  double _homeButtonSize = 0.07; // 7% of screen width
 
   // Grid layout constants
   final double _gridWidth = 0.8; // 80% of screen width
@@ -182,10 +295,10 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   final double _gridY = 0.3; // 30% from top
 
   // Coconut constants
-  double _coconutRowHeight = 0.08; // 8% of screen height
-  double _coconutRowBottom = 0.03; // 3% from bottom
-  double _coconutSize = 0.065; // 6.5% of screen width
-  final double _coconutRowWidth = 0.95; // 95% of screen width
+  double _coconutRowHeight = 0.05; // Reduced from 0.08
+  double _coconutRowBottom = 0.03; // Keep at 3% from bottom
+  double _coconutSize = 0.045; // Reduced from 0.065
+  double _coconutRowWidth = 0.85; // Removed 'final' keyword
 
   // Home button state
   bool _isHomePressed = false;
@@ -349,22 +462,15 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   Future<void> _loadAchiSprite() async {
     if (!mounted) return;
 
-    print('Loading Achi sprite...');
     try {
       final data = await rootBundle.load('assets/images/achianim/achianim.png');
       final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
       final frame = await codec.getNextFrame();
 
       if (!mounted) return;
-
-      // Force a rebuild after setting sprite
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        setState(() {
-          _achiSprite = frame.image;
-          print(
-              'Set _achiSprite in state with size: ${frame.image.width}x${frame.image.height}');
-        });
+      setState(() {
+        _achiSprite = frame.image;
+        _achiImagesLoaded = true;
       });
     } catch (e) {
       print('Error loading Achi sprite: $e');
@@ -374,49 +480,58 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    print("GameBoard initState started");
     level = widget.level;
     _setTreeType();
+    print("Loading Fibo sprite...");
     _loadFiboSprite();
+    print("Loading Achi sprite...");
     _loadAchiSprite();
 
     // Initialize tree after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      print("Post frame callback executed");
       if (!mounted) return;
       _initializeTree();
     });
 
-    // Comment out clock timer temporarily
-    // _clockTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
-    //   if (!mounted || _isDisposed) {
-    //     timer.cancel();
-    //     return;
-    //   }
-    //   setState(() {
-    //     this.timer = (this.timer + 1) % 60;
-    //   });
-    // });
-
-    // Match the original timing: 14 frames * 0.05s = 0.7s total
+    // Animation controllers setup
+    print("Setting up animation controllers");
     _fiboController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 700),
     )..addListener(() {
-        if (!mounted) return; // Check if mounted before setState
-        setState(() {
+        if (!mounted) return;
+        safeSetState(() {
           _currentFrame = (_fiboController.value * 13).floor();
         });
       });
 
-    // Add Achi animation controller - 80ms per frame * 10 frames = 800ms total
     _achiController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 800),
     )..addListener(() {
         if (!mounted) return;
-        setState(() {
-          _currentAchiFrame = (_achiController.value * 9).floor() + 1;
+        safeSetState(() {
+          // Explicitly map animation values to frames
+          final value = _achiController.value;
+          if (value < 0.001) {
+            _currentAchiFrame = 1; // Ensure we start at frame 1
+          } else if (value >= 0.999) {
+            _currentAchiFrame = 9; // Ensure we end at frame 9
+          } else {
+            // Distribute the remaining frames evenly
+            _currentAchiFrame = ((value * 7) + 1).floor() + 1;
+          }
         });
       });
+
+    // Set the initial frame to the standing position
+    safeSetState(() {
+      _currentAchiFrame = 3;
+    });
+
+    print("GameBoard initState completed");
   }
 
   void _setTreeType() {
@@ -449,20 +564,26 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   }
 
   void _initializeTree() {
-    setState(() {
-      treeSprite = Image.asset(
-        'assets/images/$currentTree/tree.png',
-        width: MediaQuery.of(context).size.width * treeSize,
-        fit: BoxFit.contain,
-      );
-    });
+    if (!mounted) return;
+
+    try {
+      safeSetState(() {
+        treeSprite = Image.asset(
+          'assets/images/$currentTree/tree.png',
+          width: MediaQuery.of(context).size.width * treeSize,
+          fit: BoxFit.contain,
+        );
+      });
+    } catch (e) {
+      print('Error initializing tree: $e');
+    }
   }
 
   @override
   void dispose() {
+    _isDisposed = true;
     _fiboController.dispose();
     _achiController.dispose();
-    _isDisposed = true;
     _clockTimer?.cancel();
     super.dispose();
   }
@@ -472,130 +593,295 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
     final screenWidth = MediaQuery.of(context).size.width;
     final screenHeight = MediaQuery.of(context).size.height;
 
-    // Generate tick overlays in build method
-    final List<Widget> currentTickOverlays = [];
-    for (int i = 1; i <= currentTicks; i++) {
-      currentTickOverlays.add(
-        Positioned(
-          left: screenWidth * (treeX + tickOffsetX),
-          bottom: screenHeight * (treeY + tickOffsetY),
+    return WillPopScope(
+      onWillPop: () async {
+        Navigator.of(context).pop();
+        return false;
+      },
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Background
+            Image.asset(
+              'assets/images/gameboard.png',
+              width: screenWidth,
+              height: screenHeight,
+              fit: BoxFit.fill,
+            ),
+
+            // Debug text
+            Positioned(
+              top: 10,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  "Game Board Level ${widget.level}",
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ),
+
+            // Add tree sprite
+            Positioned(
+              left: screenWidth * treeX,
+              bottom: screenHeight * treeY,
+              child: Image.asset(
+                'assets/images/$currentTree/tree.png',
+                width: screenWidth * treeSize,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error loading tree: $error');
+                  return Container(
+                    width: screenWidth * treeSize,
+                    height: screenWidth * treeSize * 1.5,
+                    color: Colors.brown.withOpacity(0.5),
+                    child: Center(
+                      child: Text(
+                        'TREE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+
+            // Achi character (standing position - frame 3)
+            Positioned(
+              left: screenWidth * achiX,
+              bottom: screenHeight * achiY,
+              child: SizedBox(
+                width: screenWidth * achiSize,
+                height: screenWidth * achiSize,
+                child: Image.asset(
+                  'assets/images/achianim/frame3.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+
+            // Fibo character (single image)
+            Positioned(
+              left: screenWidth * fiboX,
+              bottom: screenHeight * fiboY,
+              child: Container(
+                width: screenWidth * fiboSize,
+                height: screenWidth * fiboSize * 2,
+                child: Image.asset(
+                  'assets/images/fibo/fiboplaceholder.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading fiboplaceholder.png: $error');
+                    return Container(
+                      width: screenWidth * fiboSize,
+                      height: screenWidth * fiboSize * 2,
+                      color: Colors.green.withOpacity(0.7),
+                      child: Center(
+                        child: Text(
+                          'FIBO',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Back button (original image)
+            Positioned(
+              left: screenWidth * _homeButtonX,
+              top: screenHeight * _homeButtonY, // Use top instead of bottom
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+                child: Image.asset(
+                  'assets/images/game/home.png',
+                  width: screenWidth * _homeButtonSize,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading home button: $error');
+                    return Container(
+                      width: screenWidth * _homeButtonSize,
+                      height: screenWidth * _homeButtonSize,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child:
+                          Icon(Icons.arrow_back, color: Colors.white, size: 30),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Clock
+            Positioned(
+              left: screenWidth * clockX,
+              bottom: screenHeight * clockY,
+              child: _buildClock(screenWidth),
+            ),
+
+            // Score board
+            Positioned(
+              left: screenWidth * scoreX,
+              bottom: screenHeight * scoreY,
+              child: Image.asset(
+                'assets/images/game/Score.png',
+                width: screenWidth * scoreSize,
+                fit: BoxFit.contain,
+              ),
+            ),
+
+            // Keys (coconuts)
+            ..._buildCoconuts(screenWidth, screenHeight),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper method to build the clock
+  Widget _buildClock(double screenWidth) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Base clock
+        Image.asset(
+          'assets/images/GameBoard/Clock/v3/Base.png',
+          width: screenWidth * clockSize,
+          fit: BoxFit.contain,
+          errorBuilder: (context, error, stackTrace) {
+            print('Error loading clock base: $error');
+            return Container(
+              width: screenWidth * clockSize,
+              height: screenWidth * clockSize,
+              decoration: BoxDecoration(
+                color: Colors.grey.withOpacity(0.5),
+                shape: BoxShape.circle,
+              ),
+            );
+          },
+        ),
+        // Rings
+        Opacity(
+          opacity: _getRingOpacity('Green'),
           child: Image.asset(
-            'assets/images/$currentTree/tick$i.png',
-            width: screenWidth * (treeSize * tickScale),
+            'assets/images/GameBoard/Clock/v3/Clock/Green.png',
+            width: screenWidth * clockSize,
             fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              print('Error loading tick$i.png: $error');
-              return Container();
+          ),
+        ),
+        Opacity(
+          opacity: _getRingOpacity('Red'),
+          child: Image.asset(
+            'assets/images/GameBoard/Clock/v3/Clock/Red.png',
+            width: screenWidth * clockSize,
+            fit: BoxFit.contain,
+          ),
+        ),
+        Opacity(
+          opacity: _getRingOpacity('Yellow'),
+          child: Image.asset(
+            'assets/images/GameBoard/Clock/v3/Clock/Yellow.png',
+            width: screenWidth * clockSize,
+            fit: BoxFit.contain,
+          ),
+        ),
+        // Dial lines
+        Image.asset(
+          'assets/images/GameBoard/Clock/v3/Clock/Dial Lines.png',
+          width: screenWidth * clockSize,
+          fit: BoxFit.contain,
+        ),
+        // Clock hand
+        Positioned(
+          left: (screenWidth * clockSize * 0.5) -
+              (screenWidth * clockSize * 0.055 * 0.5),
+          top: 0,
+          child: Transform.rotate(
+            angle: timer * 2 * 3.14159 / 60,
+            alignment: Alignment.bottomCenter,
+            child: Image.asset(
+              'assets/images/GameBoard/Clock/v3/Clock/Dial.png',
+              width: screenWidth * clockSize * 0.055,
+              fit: BoxFit.contain,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to build coconuts (keys)
+  List<Widget> _buildCoconuts(double screenWidth, double screenHeight) {
+    final coconuts = <Widget>[];
+
+    // Calculate spacing to fit all keys
+    final keyWidth = screenWidth * _coconutSize;
+    final totalWidth = screenWidth * _coconutRowWidth;
+    final availableSpace = totalWidth - (keyWidth * 10); // 10 keys
+    final spacing = availableSpace / 9; // 9 spaces between 10 keys
+
+    // Add keys 1-9 and 0 (as key10)
+    for (int i = 1; i <= 10; i++) {
+      final keyNumber = i == 10 ? 10 : i; // Key 10 is for digit 0
+      final keyIndex = i - 1; // 0-based index
+
+      // Calculate position with even spacing
+      final leftPosition = screenWidth * (0.5 - _coconutRowWidth / 2) +
+          keyIndex * (keyWidth + spacing);
+
+      coconuts.add(
+        Positioned(
+          left: leftPosition,
+          bottom: screenHeight * _coconutRowBottom,
+          child: GestureDetector(
+            onTap: () {
+              print('Key $keyNumber pressed');
+              // Handle key press
             },
+            child: Image.asset(
+              'assets/images/key/key$keyNumber.png',
+              width: keyWidth,
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                print('Error loading key$keyNumber: $error');
+                return Container(
+                  width: keyWidth,
+                  height: keyWidth,
+                  color: Colors.orange.withOpacity(0.5),
+                  child: Center(child: Text('$keyNumber')),
+                );
+              },
+            ),
           ),
         ),
       );
     }
 
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Background - full screen
-          Image.asset(
-            'assets/images/gameboard.png',
-            width: screenWidth,
-            height: screenHeight,
-            fit: BoxFit.fill, // Stretch to fill screen
-          ),
+    return coconuts;
+  }
 
-          // Add tree sprite
-          Positioned(
-            left: MediaQuery.of(context).size.width * treeX,
-            bottom: MediaQuery.of(context).size.height * treeY,
-            child: Image.asset(
-              'assets/images/$currentTree/tree.png',
-              width: MediaQuery.of(context).size.width * treeSize,
-              fit: BoxFit.contain,
-            ),
-          ),
-
-          _buildTimerScore(),
-          _buildAnswerLayer(),
-          _buildScoreBoard(), // Move after other layers
-
-          // Home Button
-          Positioned(
-            left: screenWidth * _homeButtonX -
-                (screenWidth * _homeButtonSize / 2),
-            top: screenHeight * (1 - _homeButtonY),
-            child: GestureDetector(
-              onTapDown: (_) => setState(() => _isHomePressed = true),
-              onTapUp: (_) {
-                setState(() => _isHomePressed = false);
-                Navigator.of(context).pop();
-              },
-              onTapCancel: () => setState(() => _isHomePressed = false),
-              child: Image.asset(
-                _isHomePressed
-                    ? 'assets/images/game/home_selected.png'
-                    : 'assets/images/game/home.png',
-                width: screenWidth * _homeButtonSize,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-
-          // Coconut number row
-          _buildCoconutNumberRow(),
-
-          // Problem widgets
-          ...problemWidgets,
-
-          // Keep tick overlays
-          ...currentTickOverlays,
-
-          // Simple Fibo implementation
-          if (_fiboSprite != null)
-            Positioned(
-              left: MediaQuery.of(context).size.width * fiboX,
-              bottom: MediaQuery.of(context).size.height * fiboY,
-              child: ClipRect(
-                child: CustomPaint(
-                  size: Size(
-                    MediaQuery.of(context).size.width * fiboSize,
-                    MediaQuery.of(context).size.width *
-                        fiboSize *
-                        2, // Try doubling height
-                  ),
-                  painter: FiboSpritePainter(
-                    sprite: _fiboSprite!,
-                    frame: fiboFrames[_currentFrame]!,
-                    spriteSheetSize: const Size(1008, 1812),
-                  ),
-                ),
-              ),
-            ),
-
-          // Updated Achi display
-          if (_achiSprite != null)
-            Positioned(
-              left: MediaQuery.of(context).size.width * achiX,
-              bottom: MediaQuery.of(context).size.height * achiY +
-                  achiFrames[_currentAchiFrame]!.spriteOffset.dy,
-              child: ClipRect(
-                child: CustomPaint(
-                  size: Size(
-                    MediaQuery.of(context).size.width * achiSize,
-                    MediaQuery.of(context).size.width * achiSize,
-                  ),
-                  painter: AchiSpritePainter(
-                    sprite: _achiSprite!,
-                    frame: achiFrames[_currentAchiFrame]!,
-                    spriteSheetSize: const Size(502, 428),
-                  ),
-                ),
-              ),
-            ),
-
-          _buildAchiControls(),
-        ],
-      ),
-    );
+  // Update the _navigateBack method to force navigation
+  void _navigateBack() {
+    // Force navigation back to previous screen
+    Navigator.of(context).pop();
   }
 
   // Add this method to build the number row
@@ -663,10 +949,33 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
       child: Stack(
         children: [
           // Base circle (bottom layer)
-          Image.asset(
-            'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png',
+          Container(
             width: screenWidth * clockSize,
-            fit: BoxFit.contain,
+            height: screenWidth * clockSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              border: Border.all(color: Colors.black, width: 1),
+            ),
+            child: ClipOval(
+              child: Image.asset(
+                'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png',
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) {
+                  print('First path failed, trying alternative...');
+                  return Image.asset(
+                    'assets/images/GameBoard/Clock/Dial Circle.png',
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) {
+                      print('Second path failed, using fallback');
+                      return Container(
+                        color: Colors.grey.withOpacity(0.7),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
           ),
           // Color rings (second layer)
           Opacity(
@@ -675,10 +984,6 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
               'assets/images/GameBoard/Clock/v3/Clock/Blue.png',
               width: screenWidth * clockSize,
               fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) {
-                print('Error loading Blue.png: $error');
-                return Container();
-              },
             ),
           ),
           Opacity(
@@ -825,45 +1130,53 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   }
 
   void animateSuccess() {
-    setState(() {
-      // Show Achi animation
-      achiSprite = Image.asset(
-        'assets/images/achianim/achiAnim1.png',
-        width: MediaQuery.of(context).size.width * 0.22,
-      );
-    });
+    if (!_isDisposed && mounted) {
+      setState(() {
+        // Show Achi animation
+        achiSprite = Image.asset(
+          'assets/images/achianim/achiAnim1.png',
+          width: MediaQuery.of(context).size.width * 0.22,
+        );
+      });
+    }
 
     // Animate through frames
     for (int i = 1; i <= 10; i++) {
       Future.delayed(Duration(milliseconds: 80 * i), () {
-        setState(() {
-          achiSprite = Image.asset(
-            'assets/images/achianim/achiAnim$i.png',
-            width: MediaQuery.of(context).size.width * 0.22,
-          );
-        });
+        if (!_isDisposed && mounted) {
+          setState(() {
+            achiSprite = Image.asset(
+              'assets/images/achianim/achiAnim$i.png',
+              width: MediaQuery.of(context).size.width * 0.22,
+            );
+          });
+        }
       });
     }
   }
 
   void animateFailure() {
-    setState(() {
-      // Show Fibo animation
-      fiboSprite = Image.asset(
-        'assets/images/fibo/fibo0.png',
-        width: MediaQuery.of(context).size.width * 0.15,
-      );
-    });
+    if (!_isDisposed && mounted) {
+      setState(() {
+        // Show Fibo animation
+        fiboSprite = Image.asset(
+          'assets/images/fibo/fibo0.png',
+          width: MediaQuery.of(context).size.width * 0.15,
+        );
+      });
+    }
 
     // Animate through frames
     for (int i = 0; i < 14; i++) {
       Future.delayed(Duration(milliseconds: 50 * i), () {
-        setState(() {
-          fiboSprite = Image.asset(
-            'assets/images/fibo/fibo$i.png',
-            width: MediaQuery.of(context).size.width * 0.15,
-          );
-        });
+        if (!_isDisposed && mounted) {
+          setState(() {
+            fiboSprite = Image.asset(
+              'assets/images/fibo/fibo$i.png',
+              width: MediaQuery.of(context).size.width * 0.15,
+            );
+          });
+        }
       });
     }
   }
@@ -924,53 +1237,59 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
 
     // Schedule later animations
     Future.delayed(const Duration(milliseconds: 200), () {
-      if (!mounted) return;
-      setState(() {
-        problemWidgets[rightCount] = AnimatedOpacity(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeOut,
-          opacity: 0,
-          child: problemWithBubble,
-        );
-      });
+      if (!_isDisposed && mounted) {
+        setState(() {
+          problemWidgets[rightCount] = AnimatedOpacity(
+            duration: const Duration(milliseconds: 400),
+            curve: Curves.easeOut,
+            opacity: 0,
+            child: problemWithBubble,
+          );
+        });
+      }
     });
 
     Future.delayed(const Duration(milliseconds: 400), () {
-      if (!mounted) return;
-      setState(() {
-        problemWidgets.removeAt(rightCount);
-      });
+      if (!_isDisposed && mounted) {
+        setState(() {
+          problemWidgets.removeAt(rightCount);
+        });
+      }
     });
   }
 
   // Helper method to add new problem widget
   void addProblemWidget(Widget problemWidget) {
-    setState(() {
-      problemWidgets.add(
-        AnimatedPositioned(
-          duration: const Duration(milliseconds: 400),
-          curve: Curves.easeInOut,
-          left: MediaQuery.of(context).size.width * 0.52,
-          top: fractionMode
-              ? MediaQuery.of(context).size.height * 0.2 +
-                  MediaQuery.of(context).size.width * 0.08
-              : MediaQuery.of(context).size.height * 0.2 +
-                  MediaQuery.of(context).size.width * 0.04,
-          child: AnimatedOpacity(
+    if (!_isDisposed && mounted) {
+      setState(() {
+        problemWidgets.add(
+          AnimatedPositioned(
             duration: const Duration(milliseconds: 400),
-            opacity: 1.0,
-            child: problemWidget,
+            curve: Curves.easeInOut,
+            left: MediaQuery.of(context).size.width * 0.52,
+            top: fractionMode
+                ? MediaQuery.of(context).size.height * 0.2 +
+                    MediaQuery.of(context).size.width * 0.08
+                : MediaQuery.of(context).size.height * 0.2 +
+                    MediaQuery.of(context).size.width * 0.04,
+            child: AnimatedOpacity(
+              duration: const Duration(milliseconds: 400),
+              opacity: 1.0,
+              child: problemWidget,
+            ),
           ),
-        ),
-      );
-    });
+        );
+      });
+    }
   }
 
   void generateProblem() {
     // Placeholder implementation
-    setState(() {
-      // Will implement actual problem generation later
-    });
+    if (!_isDisposed && mounted) {
+      setState(() {
+        // Will implement actual problem generation later
+      });
+    }
   }
 
   // Update score board display method
@@ -996,9 +1315,9 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   }
 
   // Add near other state variables
-  double achiX = 0.155; // Initial X position
-  double achiY = 0.22; // Initial Y position
-  double achiSize = 0.11; // Keep current size
+  double achiX = 0.155; // X position at 15.5% from left
+  double achiY = 0.185; // Y position at 18.5% from bottom
+  double achiSize = 0.1; // Size at 10% of screen width
   ui.Image? _achiSprite; // For sprite sheet
 
   // Add with other frame data
@@ -1057,12 +1376,6 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
       sourceSize: const Size(200, 161),
       spriteOffset: const Offset(5, -18),
     ),
-    10: AchiFrame(
-      textureRect: Rect.fromLTWH(353, 1, 137, 126),
-      rotated: true,
-      sourceSize: const Size(200, 161),
-      spriteOffset: const Offset(9, -12),
-    ),
   };
 
   // Update sprite sheet size constant
@@ -1072,17 +1385,82 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   late AnimationController _achiController;
   int _currentAchiFrame = 1;
 
-  // Add method to start animation
-  void _startAchiAnimation() {
-    if (!mounted) return;
-    _achiController.forward(from: 0);
+  // Add this boolean flag to track animation state
+  bool _isAnimating = false;
+
+  // Replace the playAchiAnimation method with this corrected sequence
+  void playAchiAnimation() {
+    if (!mounted || _isAnimating) return;
+
+    _isAnimating = true;
+    print("Starting direct animation with correct sequence");
+
+    // Start with frame 3 (standing position)
+    safeSetState(() {
+      _currentAchiFrame = 3;
+    });
+
+    // Use the correct frame sequence
+    Future.delayed(Duration(milliseconds: 0), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 3); // Start standing
+      print("Set frame to 3 (standing)");
+    });
+
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 2); // Begin jump
+      print("Set frame to 2 (begin jump)");
+    });
+
+    Future.delayed(Duration(milliseconds: 200), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 1); // Rising
+      print("Set frame to 1 (rising)");
+    });
+
+    Future.delayed(Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 4); // Higher
+      print("Set frame to 4 (higher)");
+    });
+
+    Future.delayed(Duration(milliseconds: 400), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 5); // Peak
+      print("Set frame to 5 (peak)");
+    });
+
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 6); // Starting to fall
+      print("Set frame to 6 (starting to fall)");
+    });
+
+    Future.delayed(Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 7); // Falling
+      print("Set frame to 7 (falling)");
+    });
+
+    Future.delayed(Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 8); // Almost landed
+      print("Set frame to 8 (almost landed)");
+    });
+
+    Future.delayed(Duration(milliseconds: 800), () {
+      if (!mounted) return;
+      safeSetState(() => _currentAchiFrame = 9); // Back on ground
+      print("Set frame to 9 (back on ground)");
+      _isAnimating = false;
+    });
   }
 
   // Add method to set specific frame
   void _setAchiFrame(int frame) {
-    if (!mounted) return;
-    setState(() {
-      _currentAchiFrame = frame.clamp(1, 10); // Keep between 1-10
+    safeSetState(() {
+      _currentAchiFrame = frame.clamp(1, 9);
     });
   }
 
@@ -1112,13 +1490,21 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
                           padding: EdgeInsets.zero,
                           constraints: BoxConstraints.tight(Size(24, 24)),
                           icon: const Icon(Icons.remove, size: 18),
-                          onPressed: () => setState(() => achiX -= 0.01),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => achiX -= 0.01);
+                            }
+                          },
                         ),
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: BoxConstraints.tight(Size(24, 24)),
                           icon: const Icon(Icons.add, size: 18),
-                          onPressed: () => setState(() => achiX += 0.01),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => achiX += 0.01);
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -1135,13 +1521,21 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
                           padding: EdgeInsets.zero,
                           constraints: BoxConstraints.tight(Size(24, 24)),
                           icon: const Icon(Icons.remove, size: 18),
-                          onPressed: () => setState(() => achiY -= 0.01),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => achiY -= 0.01);
+                            }
+                          },
                         ),
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: BoxConstraints.tight(Size(24, 24)),
                           icon: const Icon(Icons.add, size: 18),
-                          onPressed: () => setState(() => achiY += 0.01),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => achiY += 0.01);
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -1158,13 +1552,21 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
                           padding: EdgeInsets.zero,
                           constraints: BoxConstraints.tight(Size(24, 24)),
                           icon: const Icon(Icons.remove, size: 18),
-                          onPressed: () => setState(() => achiSize -= 0.01),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => achiSize -= 0.01);
+                            }
+                          },
                         ),
                         IconButton(
                           padding: EdgeInsets.zero,
                           constraints: BoxConstraints.tight(Size(24, 24)),
                           icon: const Icon(Icons.add, size: 18),
-                          onPressed: () => setState(() => achiSize += 0.01),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => achiSize += 0.01);
+                            }
+                          },
                         ),
                       ],
                     ),
@@ -1195,12 +1597,185 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
             ),
             const SizedBox(height: 8),
             ElevatedButton(
-              onPressed: _startAchiAnimation,
+              onPressed: playAchiAnimation,
               child: const Text('Test Animation'),
             ),
           ],
         ),
       ),
     );
+  }
+
+  // Add these methods to control Fibo
+  void _startFiboAnimation() {
+    if (_fiboController.isAnimating) {
+      _fiboController.stop();
+    } else {
+      _fiboController.reset();
+      _fiboController.forward();
+    }
+  }
+
+  void _setFiboFrame(int frame) {
+    safeSetState(() {
+      _currentFrame = frame.clamp(0, 13);
+    });
+  }
+
+  // Add a new method for Fibo controls
+  Widget _buildFiboControls() {
+    return Positioned(
+      right: 20,
+      top: 20,
+      child: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.8),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Position controls
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Fibo X: ${fiboX.toStringAsFixed(3)}'),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => fiboX -= 0.01);
+                            }
+                          },
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => fiboX += 0.01);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Fibo Y: ${fiboY.toStringAsFixed(3)}'),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => fiboY -= 0.01);
+                            }
+                          },
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => fiboY += 0.01);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text('Fibo Size: ${fiboSize.toStringAsFixed(3)}'),
+                    Row(
+                      children: [
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.remove, size: 18),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => fiboSize -= 0.01);
+                            }
+                          },
+                        ),
+                        IconButton(
+                          padding: EdgeInsets.zero,
+                          constraints: BoxConstraints.tight(Size(24, 24)),
+                          icon: const Icon(Icons.add, size: 18),
+                          onPressed: () {
+                            if (!_isDisposed && mounted) {
+                              setState(() => fiboSize += 0.01);
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            // Frame controls
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('Frame: $_currentFrame'),
+                const SizedBox(width: 8),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tight(Size(24, 24)),
+                  icon: const Icon(Icons.chevron_left, size: 18),
+                  onPressed: () => _setFiboFrame(_currentFrame - 1),
+                ),
+                IconButton(
+                  padding: EdgeInsets.zero,
+                  constraints: BoxConstraints.tight(Size(24, 24)),
+                  icon: const Icon(Icons.chevron_right, size: 18),
+                  onPressed: () => _setFiboFrame(_currentFrame + 1),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _startFiboAnimation,
+              child: const Text('Test Fibo Animation'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Add these variables
+  List<AssetImage> _achiFrames = [];
+  bool _achiImagesLoaded = false;
+
+  // Add this helper method to your _GameBoardState class
+  void safeSetState(Function fn) {
+    if (!_isDisposed && mounted) {
+      setState(() {
+        fn();
+      });
+    }
   }
 }
