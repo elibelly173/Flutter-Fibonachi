@@ -5,6 +5,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart' show rootBundle;
 import 'achi_sprite.dart';
 import 'dart:io';
+import 'utils/safe_state.dart';
+import 'models/problem_generator.dart';
 
 // Add at the top of the file after imports
 class FiboFrame {
@@ -285,9 +287,14 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   List<int> selectedNumbers = [];
 
   // UI positioning constants
-  double _homeButtonX = 0.05; // 5% from left
-  double _homeButtonY = 0.03; // 3% from top
-  double _homeButtonSize = 0.07; // 7% of screen width
+  double _homeButtonX = 0.025; // X position at 2.5% from left
+  double _homeButtonY = 0.03; // Y position at 3% from top
+  double _homeButtonSize = 0.07; // Size at 7% of screen width
+
+  // Add these three variables here:
+  double leftArrowX = 0.40 - 0.02; // X position at 38% from left
+  double leftArrowY = 0.57; // Y position at 57% from top
+  double leftArrowSize = 0.17; // Size at 17% of screen width
 
   // Grid layout constants
   final double _gridWidth = 0.8; // 80% of screen width
@@ -311,9 +318,9 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   late Image fiboSprite;
 
   // Add adjustment variables
-  double clockX = 0.15; // 15% from left
-  double clockY = 0.86; // 86% up from bottom
-  double clockSize = 0.05; // 5% of screen width
+  double clockX = 0.635; // X position at 63.5% from left
+  double clockY = 0.82; // Y position at 82% from bottom
+  double clockSize = 0.07; // Size at 7% of screen width
 
   // Update initial score board values
   double scoreX = 0.41; // 41% from left
@@ -483,6 +490,10 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
     print("GameBoard initState started");
     level = widget.level;
     _setTreeType();
+
+    // Generate problems for this level
+    generateProblems();
+
     print("Loading Fibo sprite...");
     _loadFiboSprite();
     print("Loading Achi sprite...");
@@ -750,6 +761,119 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
 
             // Keys (coconuts)
             ..._buildCoconuts(screenWidth, screenHeight),
+
+            // Achi's thought bubble
+            Positioned(
+              left: screenWidth * thoughtBubbleX,
+              top: screenHeight * thoughtBubbleY,
+              child: Container(
+                width: screenWidth * thoughtBubbleSize,
+                height: screenWidth * thoughtBubbleSize * 0.8,
+                child: Center(
+                  child: buildCurrentProblem(),
+                ),
+              ),
+            ),
+
+            // Achi's problem bubble
+            Positioned(
+              left: screenWidth * speechBubbleAchiX,
+              top: screenHeight * speechBubbleAchiY,
+              child: Image.asset(
+                'assets/images/game/problem_small.png',
+                width: screenWidth * speechBubbleAchiSize,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error loading problem bubble: $error');
+                  return Container(
+                    width: screenWidth * speechBubbleAchiSize,
+                    height: screenWidth * speechBubbleAchiSize * 0.7,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(child: Text('Problem')),
+                  );
+                },
+              ),
+            ),
+
+            // Fibo's answer bubble
+            Positioned(
+              left: screenWidth * speechBubbleFiboX,
+              top: screenHeight * speechBubbleFiboY,
+              child: Container(
+                width: screenWidth * speechBubbleFiboSize,
+                height: screenWidth * speechBubbleFiboSize * 0.7,
+                child: Center(
+                  child: Text(
+                    userAnswer,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+
+            // Left arrow image
+            Positioned(
+              left: screenWidth * leftArrowX,
+              top: screenHeight * leftArrowY,
+              child: GestureDetector(
+                onTap: () {
+                  // Handle left arrow press (previous problem)
+                  print('Left arrow pressed');
+                },
+                child: Image.asset(
+                  'assets/images/game/left.png',
+                  width: screenWidth * leftArrowSize,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading left arrow: $error');
+                    return Container(
+                      width: screenWidth * leftArrowSize,
+                      height: screenWidth * leftArrowSize,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.arrow_back, color: Colors.white),
+                    );
+                  },
+                ),
+              ),
+            ),
+
+            // Position adjustment controls
+            Positioned(
+              bottom: 5,
+              left: 5,
+              child: Container(
+                padding: EdgeInsets.all(6),
+                color: Colors.white.withOpacity(0.6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        "Left Arrow (${leftArrowX.toStringAsFixed(2)},${leftArrowY.toStringAsFixed(2)},${leftArrowSize.toStringAsFixed(2)})",
+                        style: TextStyle(fontSize: 10)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMiniButton("X-", () => leftArrowX -= 0.01),
+                        _buildMiniButton("X+", () => leftArrowX += 0.01),
+                        _buildMiniButton("Y-", () => leftArrowY -= 0.01),
+                        _buildMiniButton("Y+", () => leftArrowY += 0.01),
+                        _buildMiniButton("S-", () => leftArrowSize -= 0.01),
+                        _buildMiniButton("S+", () => leftArrowSize += 0.01),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -840,7 +964,7 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
 
     // Add keys 1-9 and 0 (as key10)
     for (int i = 1; i <= 10; i++) {
-      final keyNumber = i == 10 ? 10 : i; // Key 10 is for digit 0
+      final keyNumber = i == 10 ? 0 : i; // Key 10 is for digit 0
       final keyIndex = i - 1; // 0-based index
 
       // Calculate position with even spacing
@@ -853,8 +977,8 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
           bottom: screenHeight * _coconutRowBottom,
           child: GestureDetector(
             onTap: () {
-              print('Key $keyNumber pressed');
-              // Handle key press
+              int keyNumber = i == 10 ? 0 : i; // Key 10 is for digit 0
+              onNumberKeyPressed(keyNumber);
             },
             child: Image.asset(
               'assets/images/key/key$keyNumber.png',
@@ -1770,12 +1894,138 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   List<AssetImage> _achiFrames = [];
   bool _achiImagesLoaded = false;
 
-  // Add this helper method to your _GameBoardState class
-  void safeSetState(Function fn) {
-    if (!_isDisposed && mounted) {
-      setState(() {
-        fn();
+  // Add this method
+  void safeSetState(VoidCallback fn) {
+    if (mounted && !_isDisposed) {
+      setState(fn);
+    }
+  }
+
+  // Add these variables with your other UI constants
+  double thoughtBubbleX = 0.09; // X position at 9% from left
+  double thoughtBubbleY = 0.08; // Y position at 8% from top
+  double thoughtBubbleSize = 0.27; // Size at 27% of screen width
+
+  double speechBubbleAchiX = 0.28; // X: 0.28 (28% from left)
+  double speechBubbleAchiY = 0.48; // Y: 0.48 (48% from top)
+  double speechBubbleAchiSize = 0.25; // Size: 0.25 (25% of screen width)
+
+  double speechBubbleFiboX = 0.65; // X: 0.65 (65% from left)
+  double speechBubbleFiboY = 0.37; // Y: 0.37 (37% from top)
+  double speechBubbleFiboSize = 0.17; // Size: 0.17 (17% of screen width)
+
+  Widget _buildMiniButton(String label, VoidCallback onPressed) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 2),
+      child: ElevatedButton(
+        onPressed: () => safeSetState(onPressed),
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.all(2),
+          minimumSize: Size(24, 20),
+          textStyle: TextStyle(fontSize: 8),
+        ),
+        child: Text(label),
+      ),
+    );
+  }
+
+  // Inside _GameBoardState, add these variables
+  List<MathProblem> problems = [];
+  int currentProblemIndex = 0;
+  String userAnswer = "";
+
+  // Add the generateProblems method
+  void generateProblems() {
+    problems.clear();
+
+    // Generate 10 problems for this level
+    for (int i = 0; i < 10; i++) {
+      problems.add(ProblemGenerator.generateProblem(level));
+    }
+  }
+
+  // Add the checkAnswer method
+  void checkAnswer() {
+    if (userAnswer == problems[currentProblemIndex].answer) {
+      // Correct answer
+      safeSetState(() {
+        rightCount++;
+        currentProblemIndex++;
+        userAnswer = "";
+
+        // Update tree with new tick
+        addTick(rightCount);
+
+        // Play Achi animation
+        playAchiAnimation();
+      });
+
+      // If all problems are answered correctly, show report
+      if (currentProblemIndex >= problems.length) {
+        showLevelCompleteDialog();
+      } else {
+        // Move to next problem with animation
+        animateProblemTransition();
+      }
+    } else {
+      // Wrong answer
+      safeSetState(() {
+        wrongCount++;
+        userAnswer = "";
+
+        // Play Fibo animation
+        _startFiboAnimation();
       });
     }
+  }
+
+  // Add this method to handle number key input
+  void onNumberKeyPressed(int number) {
+    if (!showingAnswer) {
+      // Animate the answer bubble showing
+      safeSetState(() {
+        showingAnswer = true;
+        userAnswer += number.toString();
+      });
+    } else {
+      // Just append the number
+      safeSetState(() {
+        userAnswer += number.toString();
+      });
+    }
+  }
+
+  // Add this method to handle enter key
+  void onEnterKeyPressed() {
+    if (userAnswer.isNotEmpty) {
+      checkAnswer();
+    }
+  }
+
+  // Add this method to handle delete key
+  void onDeleteKeyPressed() {
+    safeSetState(() {
+      userAnswer = "";
+    });
+  }
+
+  // Add this method to add a tick to the tree
+  void addTick(int tickNumber) {
+    // Implementation will depend on your tree visualization
+  }
+
+  // Add a method to build the current problem
+  Widget buildCurrentProblem() {
+    if (currentProblemIndex >= problems.length) {
+      return Container();
+    }
+
+    return Text(
+      problems[currentProblemIndex].problem,
+      style: TextStyle(
+        color: Colors.black,
+        fontSize: 24,
+      ),
+    );
   }
 }

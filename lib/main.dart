@@ -41,7 +41,7 @@ class _StartScreenState extends State<StartScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Move precaching to after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Precache images

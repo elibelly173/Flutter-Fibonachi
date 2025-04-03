@@ -107,6 +107,10 @@ flutter:
     - assets/images/tree10/
     - assets/images/tree20/
     - assets/images/tree80/
+    - assets/images/game/thought.png
+    - assets/images/game/problem_small.png
+    - assets/images/game/Bubble_Small.png
+    - assets/images/game/left.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
-import 'game_board.dart';  // Add this import
+import 'game_board.dart'; // Add this import
+import 'utils/safe_state.dart'; // Add this import
 
 class LevelPosition {
   final double x;
@@ -16,12 +17,13 @@ class MapView extends StatefulWidget {
   State<MapView> createState() => _MapViewState();
 }
 
-class _MapViewState extends State<MapView> {
+class _MapViewState extends State<MapView> with SafeState {
   late ScrollController _scrollController;
   double _aspectRatio = 1.0;
   bool _isMapLoaded = false;
   bool _areImagesLoaded = false;
   int _selectedLevel = -1;
+  bool _isDisposed = false;
   final double _levelGroundWidth = 0.55; // Starting at 55% of screen width
   final double _levelGroundHeight = 0.08; // Starting at 8% from bottom
 
@@ -85,23 +87,23 @@ class _MapViewState extends State<MapView> {
   final double _levelNumberY = 0.616; // 61.6% from bottom
   final double _levelNumberSize = 0.37; // 37% of level ground width
 
-  final double _timerX = 1.15;  // 115% from left
-  final double _timerY = 0.28;  // 28% from bottom
-  final double _timerSize = 0.17;  // 17% of level ground width
+  final double _timerX = 1.15; // 115% from left
+  final double _timerY = 0.28; // 28% from bottom
+  final double _timerSize = 0.17; // 17% of level ground width
 
-  final double _contentX = 0.88;  // 88% from left
-  final double _contentY = 0.50;  // 50% from bottom
-  final double _contentSize = 0.65;  // 65% of level ground width
+  final double _contentX = 0.88; // 88% from left
+  final double _contentY = 0.50; // 50% from bottom
+  final double _contentSize = 0.65; // 65% of level ground width
 
-  final double _targetX = 0.61;  // 61% from left
+  final double _targetX = 0.61; // 61% from left
 
   // Add these with your other state variables
-  final double _continueX = 0.872;  // 87.2% from left
-  final double _continueY = -0.001;  // -0.1% from bottom
-  final double _continueSize = 0.29;  // 29% of level ground width
+  final double _continueX = 0.872; // 87.2% from left
+  final double _continueY = -0.001; // -0.1% from bottom
+  final double _continueSize = 0.29; // 29% of level ground width
 
   // Update target size
-  final double _targetSize = 0.162;  // 16.2% of level ground width
+  final double _targetSize = 0.162; // 16.2% of level ground width
 
   // Add this method to find lowest incomplete level
   int _findLowestIncompleteLevel() {
@@ -116,35 +118,13 @@ class _MapViewState extends State<MapView> {
       final screenWidth = MediaQuery.of(context).size.width;
       final mapHeight = screenWidth * _aspectRatio;
       final levelY = levelPositions[level - 1].y;
-      
+
       // Calculate from bottom again
-      final scrollPosition = mapHeight * (1 - levelY) - (MediaQuery.of(context).size.height / 2);
-      _scrollController.jumpTo(scrollPosition.clamp(0, _scrollController.position.maxScrollExtent));
+      final scrollPosition =
+          mapHeight * (1 - levelY) - (MediaQuery.of(context).size.height / 2);
+      _scrollController.jumpTo(
+          scrollPosition.clamp(0, _scrollController.position.maxScrollExtent));
     }
-  }
-
-  Future<void> _preloadImages() async {
-    // Load map immediately
-    await precacheImage(const AssetImage('assets/images/mapback.jpg'), context);
-
-    setState(() {
-      _areImagesLoaded = true;
-    });
-
-    // Load everything else in parallel
-    Future.wait([
-      // Map sections
-      precacheImage(const AssetImage('assets/images/mapback/1-6.png'), context),
-      precacheImage(const AssetImage('assets/images/mapback/7-12.png'), context),
-      precacheImage(const AssetImage('assets/images/mapback/13-18.png'), context),
-      precacheImage(const AssetImage('assets/images/mapback/19-24.png'), context),
-      precacheImage(const AssetImage('assets/images/mapback/25-30.png'), context),
-      precacheImage(const AssetImage('assets/images/mapback/31-32.png'), context),
-      
-      // All level buttons at once
-      for (int i = 1; i <= 32; i++)
-        precacheImage(AssetImage('assets/images/levels_incomplete/$i.png'), context),
-    ]);
   }
 
   @override
@@ -153,8 +133,8 @@ class _MapViewState extends State<MapView> {
     _scrollController = ScrollController();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _preloadImages(); // Start preloading images
-      _scrollToLevel(_findLowestIncompleteLevel());  // Scroll to lowest incomplete level
+      _preloadImages();
+      _scrollToLevel(_findLowestIncompleteLevel());
 
       AssetImage('assets/images/mapback.jpg')
           .resolve(const ImageConfiguration())
@@ -162,7 +142,7 @@ class _MapViewState extends State<MapView> {
         ImageStreamListener((ImageInfo info, bool _) {
           final double imageWidth = info.image.width.toDouble();
           final double imageHeight = info.image.height.toDouble();
-          setState(() {
+          safeSetState(() {
             _aspectRatio = imageHeight / imageWidth;
           });
         }),
@@ -172,6 +152,7 @@ class _MapViewState extends State<MapView> {
 
   @override
   void dispose() {
+    _isDisposed = true;
     _scrollController.dispose();
     super.dispose();
   }
@@ -202,7 +183,8 @@ class _MapViewState extends State<MapView> {
         children: [
           ScrollConfiguration(
             behavior: _scrollBehavior,
-            child: SizedBox(  // Add fixed height container
+            child: SizedBox(
+              // Add fixed height container
               height: MediaQuery.of(context).size.height,
               child: SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
@@ -217,8 +199,14 @@ class _MapViewState extends State<MapView> {
                       fit: BoxFit.fill,
                       frameBuilder: (context, child, frame, _) {
                         if (frame != null && !_isMapLoaded) {
-                          setState(() {
-                            _isMapLoaded = true;  // This should trigger overlay display
+                          // Don't call setState here!
+                          // Instead, use Future.microtask to schedule it for after build
+                          Future.microtask(() {
+                            if (mounted) {
+                              safeSetState(() {
+                                _isMapLoaded = true;
+                              });
+                            }
                           });
                         }
                         return child;
@@ -322,10 +310,12 @@ class _MapViewState extends State<MapView> {
                     for (int i = 0; i < levelPositions.length; i++)
                       Positioned(
                         left: mapWidth * levelPositions[i].x,
-                        top: mapHeight * (1 - levelPositions[i].y),  // Add back the 1 - levelY
+                        top: mapHeight *
+                            (1 -
+                                levelPositions[i].y), // Add back the 1 - levelY
                         child: GestureDetector(
                           onTap: () {
-                            setState(() {
+                            safeSetState(() {
                               _selectedLevel = i;
                             });
                           },
@@ -348,7 +338,7 @@ class _MapViewState extends State<MapView> {
             Positioned.fill(
               child: GestureDetector(
                 onTap: () {
-                  setState(() {
+                  safeSetState(() {
                     _selectedLevel = -1;
                   });
                 },
@@ -374,11 +364,14 @@ class _MapViewState extends State<MapView> {
                   // Target number image
                   Positioned(
                     left: (mapWidth * _levelGroundWidth * _targetX) -
-                        ((mapWidth * _levelGroundWidth * _targetSize) / 2),  // Use targetSize
+                        ((mapWidth * _levelGroundWidth * _targetSize) /
+                            2), // Use targetSize
                     bottom: mapWidth * _levelGroundWidth * _timerY,
                     child: Image.asset(
                       'assets/images/target/${_getTargetNumber(_selectedLevel + 1)}.png',
-                      width: mapWidth * _levelGroundWidth * _targetSize,  // Use targetSize
+                      width: mapWidth *
+                          _levelGroundWidth *
+                          _targetSize, // Use targetSize
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -399,7 +392,7 @@ class _MapViewState extends State<MapView> {
                         ((mapWidth * _levelGroundWidth * _contentSize) / 2),
                     bottom: mapWidth * _levelGroundWidth * _contentY,
                     child: Image.asset(
-                      'assets/images/contents/content${_selectedLevel + 1}.png',  // Added 's' to contents
+                      'assets/images/contents/content${_selectedLevel + 1}.png', // Added 's' to contents
                       width: mapWidth * _levelGroundWidth * _contentSize,
                       fit: BoxFit.contain,
                     ),
@@ -410,7 +403,7 @@ class _MapViewState extends State<MapView> {
                         ((mapWidth * _levelGroundWidth * _timerSize) / 2),
                     bottom: mapWidth * _levelGroundWidth * _timerY,
                     child: Image.asset(
-                      'assets/images/timer/timer30.png',  // Use time value instead of level number
+                      'assets/images/timer/timer30.png', // Use time value instead of level number
                       width: mapWidth * _levelGroundWidth * _timerSize,
                       fit: BoxFit.contain,
                     ),
@@ -421,7 +414,7 @@ class _MapViewState extends State<MapView> {
                     bottom: mapWidth * _levelGroundWidth * _closeButtonY,
                     child: GestureDetector(
                       onTap: () {
-                        setState(() {
+                        safeSetState(() {
                           _selectedLevel = -1;
                         });
                       },
@@ -441,7 +434,8 @@ class _MapViewState extends State<MapView> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => GameBoard(level: _selectedLevel + 1),
+                            builder: (context) =>
+                                GameBoard(level: _selectedLevel + 1),
                           ),
                         );
                       },
@@ -463,7 +457,7 @@ class _MapViewState extends State<MapView> {
 
   String _getTimeValue(int level) {
     // For now, return '30' for all levels
-    return '30';  // This will look for 'timer30.png' in the assets
+    return '30'; // This will look for 'timer30.png' in the assets
   }
 
   // Add this method to get the target number for each level
@@ -485,7 +479,7 @@ class _MapViewState extends State<MapView> {
       case 12:
       case 13:
       case 14:
-        filename = 'number20';  // First 14 levels have target 20
+        filename = 'number20'; // First 14 levels have target 20
         break;
       case 15:
       case 18:
@@ -497,7 +491,7 @@ class _MapViewState extends State<MapView> {
       case 30:
       case 31:
       case 32:
-        filename = 'number10';  // These levels have target 10
+        filename = 'number10'; // These levels have target 10
         break;
       case 20:
       case 24:
@@ -505,11 +499,40 @@ class _MapViewState extends State<MapView> {
       case 26:
       case 27:
       case 28:
-        filename = 'number5';   // These levels have target 5
+        filename = 'number5'; // These levels have target 5
         break;
       default:
-        filename = 'number20';  // Default value
+        filename = 'number20'; // Default value
     }
     return filename;
+  }
+
+  Future<void> _preloadImages() async {
+    await precacheImage(const AssetImage('assets/images/mapback.jpg'), context);
+
+    safeSetState(() {
+      _areImagesLoaded = true;
+    });
+
+    // Load everything else in parallel
+    Future.wait([
+      // Map sections
+      precacheImage(const AssetImage('assets/images/mapback/1-6.png'), context),
+      precacheImage(
+          const AssetImage('assets/images/mapback/7-12.png'), context),
+      precacheImage(
+          const AssetImage('assets/images/mapback/13-18.png'), context),
+      precacheImage(
+          const AssetImage('assets/images/mapback/19-24.png'), context),
+      precacheImage(
+          const AssetImage('assets/images/mapback/25-30.png'), context),
+      precacheImage(
+          const AssetImage('assets/images/mapback/31-32.png'), context),
+
+      // All level buttons at once
+      for (int i = 1; i <= 32; i++)
+        precacheImage(
+            AssetImage('assets/images/levels_incomplete/$i.png'), context),
+    ]);
   }
 }
