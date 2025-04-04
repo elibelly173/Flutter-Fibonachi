@@ -11,7 +11,7 @@ class LevelPosition {
 }
 
 class MapView extends StatefulWidget {
-  const MapView({super.key});
+  const MapView({Key? key}) : super(key: key);
 
   @override
   State<MapView> createState() => _MapViewState();
@@ -38,6 +38,11 @@ class _MapViewState extends State<MapView> with SafeState {
   final double overlay7Height = 0.173000000000000;
   final double overlay25Bottom = 0.714000000000000;
   final double overlay25Height = 0.158000000000000;
+
+  // Add this constant with your other overlay constants
+  final double overlay1Bottom = 0.0; // Starting from bottom of map
+  final double overlay1Height =
+      0.143599000021581; // Set to match exactly where overlay7 begins
 
   final List<LevelPosition> levelPositions = [
     LevelPosition(0.3741156445667631, 0.033198838013191595), // Level 1
@@ -105,6 +110,25 @@ class _MapViewState extends State<MapView> with SafeState {
   // Update target size
   final double _targetSize = 0.162; // 16.2% of level ground width
 
+  // Track which levels are unlocked
+  int unlockedLevel = 0; // Set to 0 to make all levels appear incomplete
+
+  // First, enable all unlocked levels for testing
+  bool level1to6Unlocked = false;
+  bool level7to12Unlocked = false;
+  bool level13to18Unlocked = false;
+  bool level19to24Unlocked = false;
+  bool level25to30Unlocked = false;
+  bool level31to32Unlocked = false;
+
+  // Update these state variables with your final values
+  double overlay1HeightFactor = 0.166; // 16.60% for levels 1-6
+  double overlay7HeightFactor = 0.1731; // 17.31% for levels 7-12
+  double overlay13HeightFactor = 0.2244; // 22.44% for levels 13-18
+  double overlay19HeightFactor = 0.3309; // 33.09% for levels 19-24
+  double overlay25HeightFactor = 0.1579; // 15.79% for levels 25-30
+  double overlay31HeightFactor = 0.134; // 13.40% for levels 31-32
+
   // Add this method to find lowest incomplete level
   int _findLowestIncompleteLevel() {
     // For now, return 1 since all levels are incomplete
@@ -131,6 +155,22 @@ class _MapViewState extends State<MapView> with SafeState {
   void initState() {
     super.initState();
     _scrollController = ScrollController();
+
+    // Set your finalized overlay height values
+    overlay1HeightFactor = 0.166; // 16.60% for levels 1-6
+    overlay7HeightFactor = 0.1731; // 17.31% for levels 7-12
+    overlay13HeightFactor = 0.2244; // 22.44% for levels 13-18
+    overlay19HeightFactor = 0.3309; // 33.09% for levels 19-24
+    overlay25HeightFactor = 0.1579; // 15.79% for levels 25-30
+    overlay31HeightFactor = 0.134; // 13.40% for levels 31-32
+
+    // Set overlay unlocked states based on current progress
+    level1to6Unlocked = unlockedLevel >= 1;
+    level7to12Unlocked = unlockedLevel >= 7;
+    level13to18Unlocked = unlockedLevel >= 13;
+    level19to24Unlocked = unlockedLevel >= 19;
+    level25to30Unlocked = unlockedLevel >= 25;
+    level31to32Unlocked = unlockedLevel >= 31;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _preloadImages();
@@ -159,297 +199,183 @@ class _MapViewState extends State<MapView> with SafeState {
 
   @override
   Widget build(BuildContext context) {
-    double mapWidth = MediaQuery.of(context).size.width;
-    double mapHeight = mapWidth * _aspectRatio;
-
-    // Show loading indicator until images are loaded
-    if (!_areImagesLoaded) {
-      return const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 20),
-              Text('Loading map...'),
-            ],
-          ),
-        ),
-      );
-    }
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+    final mapHeight = screenWidth * _aspectRatio;
 
     return Scaffold(
       body: Stack(
         children: [
-          ScrollConfiguration(
-            behavior: _scrollBehavior,
-            child: SizedBox(
-              // Add fixed height container
-              height: MediaQuery.of(context).size.height,
-              child: SingleChildScrollView(
-                physics: const ClampingScrollPhysics(),
-                controller: _scrollController,
-                child: Stack(
-                  children: [
-                    // Base map image
-                    Image.asset(
-                      'assets/images/mapback.jpg',
-                      width: mapWidth,
-                      height: mapHeight,
-                      fit: BoxFit.fill,
-                      frameBuilder: (context, child, frame, _) {
-                        if (frame != null && !_isMapLoaded) {
-                          // Don't call setState here!
-                          // Instead, use Future.microtask to schedule it for after build
-                          Future.microtask(() {
-                            if (mounted) {
-                              safeSetState(() {
-                                _isMapLoaded = true;
-                              });
-                            }
-                          });
-                        }
-                        return child;
-                      },
+          // Scrolling map content
+          SingleChildScrollView(
+            controller: _scrollController,
+            child: Container(
+              width: screenWidth,
+              height: mapHeight,
+              child: Stack(
+                children: [
+                  // Background image
+                  Image.asset(
+                    'assets/images/mapback.jpg',
+                    width: screenWidth,
+                    height: mapHeight,
+                    fit: BoxFit.cover,
+                  ),
+
+                  // Overlay sections FIRST (so buttons appear on top)
+                  // Level 1-6 overlay (if not unlocked)
+                  if (!level1to6Unlocked)
+                    Positioned(
+                      left: 0,
+                      bottom: 0,
+                      width: screenWidth,
+                      height: mapHeight * overlay1HeightFactor,
+                      child: Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/mapback/1-6.png',
+                          width: screenWidth,
+                          fit: BoxFit.fill,
+                          alignment: Alignment.bottomCenter,
+                        ),
+                      ),
                     ),
 
-                    // Section overlays
-                    if (_isMapLoaded) ...[
-                      // Section 1 (1-6)
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        child: Opacity(
-                          opacity: 0.4,
-                          child: Image.asset(
-                            'assets/images/mapback/1-6.png',
-                            width: mapWidth,
-                            height: mapHeight * 0.166,
-                            fit: BoxFit.fill,
-                          ),
+                  // Level 7-12 overlay (if not unlocked)
+                  if (!level7to12Unlocked)
+                    Positioned(
+                      left: 0,
+                      bottom: mapHeight * overlay7Bottom,
+                      width: screenWidth,
+                      height: mapHeight * overlay7HeightFactor,
+                      child: Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/mapback/7-12.png',
+                          width: screenWidth,
+                          fit: BoxFit.fill,
+                          alignment: Alignment.bottomCenter,
                         ),
                       ),
+                    ),
 
-                      // Section 2 (7-12)
-                      Positioned(
-                        bottom: mapHeight * overlay7Bottom,
-                        left: 0,
-                        child: Opacity(
-                          opacity: 0.5,
-                          child: Image.asset(
-                            'assets/images/mapback/7-12.png',
-                            width: mapWidth,
-                            height: mapHeight * overlay7Height,
-                            fit: BoxFit.fill,
-                          ),
+                  // Level 13-18 overlay (if not unlocked)
+                  if (!level13to18Unlocked)
+                    Positioned(
+                      left: 0,
+                      bottom: mapHeight * overlay13Bottom,
+                      width: screenWidth,
+                      height: mapHeight * overlay13HeightFactor,
+                      child: Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/mapback/13-18.png',
+                          width: screenWidth,
+                          fit: BoxFit.fill,
+                          alignment: Alignment.bottomCenter,
                         ),
                       ),
+                    ),
 
-                      // Section 3 (13-18)
-                      Positioned(
-                        bottom: mapHeight * overlay13Bottom,
-                        left: 0,
-                        child: Opacity(
-                          opacity: 0.4,
-                          child: Image.asset(
-                            'assets/images/mapback/13-18.png',
-                            width: mapWidth,
-                            height: mapHeight * overlay13Height,
-                            fit: BoxFit.fill,
-                          ),
+                  // Level 19-24 overlay (if not unlocked)
+                  if (!level19to24Unlocked)
+                    Positioned(
+                      left: 0,
+                      bottom: mapHeight * overlay19Bottom,
+                      width: screenWidth,
+                      height: mapHeight * overlay19HeightFactor,
+                      child: Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/mapback/19-24.png',
+                          width: screenWidth,
+                          fit: BoxFit.fill,
+                          alignment: Alignment.bottomCenter,
                         ),
                       ),
+                    ),
 
-                      // Section 4 (19-24)
-                      Positioned(
-                        bottom: mapHeight * overlay19Bottom,
-                        left: 0,
-                        child: Opacity(
-                          opacity: 0.603,
-                          child: Image.asset(
-                            'assets/images/mapback/19-24.png',
-                            width: mapWidth,
-                            height: mapHeight * overlay19Height,
-                            fit: BoxFit.fill,
-                          ),
+                  // Level 25-30 overlay (if not unlocked)
+                  if (!level25to30Unlocked)
+                    Positioned(
+                      left: 0,
+                      bottom: mapHeight * overlay25Bottom,
+                      width: screenWidth,
+                      height: mapHeight * overlay25HeightFactor,
+                      child: Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/mapback/25-30.png',
+                          width: screenWidth,
+                          fit: BoxFit.fill,
+                          alignment: Alignment.bottomCenter,
                         ),
                       ),
+                    ),
 
-                      // Section 5 (25-30)
-                      Positioned(
-                        bottom: mapHeight * overlay25Bottom,
-                        left: 0,
-                        child: Opacity(
-                          opacity: 0.4,
-                          child: Image.asset(
-                            'assets/images/mapback/25-30.png',
-                            width: mapWidth,
-                            height: mapHeight * overlay25Height,
-                            fit: BoxFit.fill,
-                          ),
+                  // Level 31-32 overlay (if not unlocked)
+                  if (!level31to32Unlocked)
+                    Positioned(
+                      left: 0,
+                      bottom: mapHeight * overlay31Bottom,
+                      width: screenWidth,
+                      height: mapHeight * overlay31HeightFactor,
+                      child: Opacity(
+                        opacity: 0.8,
+                        child: Image.asset(
+                          'assets/images/mapback/31-32.png',
+                          width: screenWidth,
+                          fit: BoxFit.fill,
+                          alignment: Alignment.bottomCenter,
                         ),
                       ),
+                    ),
 
-                      // Section 6 (31-32)
-                      Positioned(
-                        bottom: mapHeight * overlay31Bottom,
-                        left: 0,
-                        child: Opacity(
-                          opacity: 0.603,
-                          child: Image.asset(
-                            'assets/images/mapback/31-32.png',
-                            width: mapWidth,
-                            height: mapHeight * overlay31Height,
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                    ],
+                  // Level buttons AFTER overlays so they're on top
+                  ...List.generate(32, (index) {
+                    final level = index + 1;
+                    final isUnlocked = level <= unlockedLevel;
+                    final position = levelPositions[index];
 
-                    // Level Buttons
-                    for (int i = 0; i < levelPositions.length; i++)
-                      Positioned(
-                        left: mapWidth * levelPositions[i].x,
-                        top: mapHeight *
-                            (1 -
-                                levelPositions[i].y), // Add back the 1 - levelY
-                        child: GestureDetector(
-                          onTap: () {
-                            safeSetState(() {
-                              _selectedLevel = i;
-                            });
-                          },
-                          child: Image.asset(
-                            'assets/images/levels_incomplete/${i + 1}.png',
-                            width: mapWidth * 0.1,
-                            height: mapWidth * 0.1,
-                          ),
+                    return Positioned(
+                      left: screenWidth * position.x,
+                      top: mapHeight * (1 - position.y),
+                      child: GestureDetector(
+                        onTap: () {
+                          // Allow tapping on any level for testing purposes
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GameBoard(level: level),
+                            ),
+                          );
+                        },
+                        child: Image.asset(
+                          'assets/images/levels_incomplete/$level.png',
+                          width: screenWidth * 0.12,
+                          fit: BoxFit.contain,
                         ),
                       ),
-                  ],
-                ),
+                    );
+                  }),
+                ],
               ),
             ),
           ),
 
-          // Dim overlay and Level Info Panel
-          if (_selectedLevel >= 0) ...[
-            // Dim the background with tap handler
-            Positioned.fill(
-              child: GestureDetector(
-                onTap: () {
-                  safeSetState(() {
-                    _selectedLevel = -1;
-                  });
-                },
-                child: Container(
-                  color: Colors.black.withOpacity(0.7),
-                ),
-              ),
+          // Back button
+          Positioned(
+            top: 20,
+            left: 20,
+            child: FloatingActionButton(
+              mini: true,
+              backgroundColor: Colors.white.withOpacity(0.7),
+              child: Icon(Icons.arrow_back, color: Colors.black),
+              onPressed: () {
+                Navigator.pop(context);
+              },
             ),
-            // Level info panel
-            Positioned(
-              bottom: MediaQuery.of(context).size.height * _levelGroundHeight,
-              left: 0,
-              right: 0,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  // Level ground image
-                  Image.asset(
-                    'assets/images/level_ground.png',
-                    width: mapWidth * _levelGroundWidth,
-                    fit: BoxFit.fitWidth,
-                  ),
-                  // Target number image
-                  Positioned(
-                    left: (mapWidth * _levelGroundWidth * _targetX) -
-                        ((mapWidth * _levelGroundWidth * _targetSize) /
-                            2), // Use targetSize
-                    bottom: mapWidth * _levelGroundWidth * _timerY,
-                    child: Image.asset(
-                      'assets/images/target/${_getTargetNumber(_selectedLevel + 1)}.png',
-                      width: mapWidth *
-                          _levelGroundWidth *
-                          _targetSize, // Use targetSize
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Level number image
-                  Positioned(
-                    left: (mapWidth * _levelGroundWidth * _levelNumberX) -
-                        ((mapWidth * _levelGroundWidth * _levelNumberSize) / 2),
-                    bottom: mapWidth * _levelGroundWidth * _levelNumberY,
-                    child: Image.asset(
-                      'assets/images/level/level${_selectedLevel + 1}.png',
-                      width: mapWidth * _levelGroundWidth * _levelNumberSize,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Content image - fix the path
-                  Positioned(
-                    left: (mapWidth * _levelGroundWidth * _contentX) -
-                        ((mapWidth * _levelGroundWidth * _contentSize) / 2),
-                    bottom: mapWidth * _levelGroundWidth * _contentY,
-                    child: Image.asset(
-                      'assets/images/contents/content${_selectedLevel + 1}.png', // Added 's' to contents
-                      width: mapWidth * _levelGroundWidth * _contentSize,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Timer image - update to use time values
-                  Positioned(
-                    left: (mapWidth * _levelGroundWidth * _timerX) -
-                        ((mapWidth * _levelGroundWidth * _timerSize) / 2),
-                    bottom: mapWidth * _levelGroundWidth * _timerY,
-                    child: Image.asset(
-                      'assets/images/timer/timer30.png', // Use time value instead of level number
-                      width: mapWidth * _levelGroundWidth * _timerSize,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                  // Close button
-                  Positioned(
-                    right: mapWidth * _levelGroundWidth * (1 - _closeButtonX),
-                    bottom: mapWidth * _levelGroundWidth * _closeButtonY,
-                    child: GestureDetector(
-                      onTap: () {
-                        safeSetState(() {
-                          _selectedLevel = -1;
-                        });
-                      },
-                      child: Image.asset(
-                        'assets/images/close.png',
-                        width: mapWidth * _levelGroundWidth * _closeButtonSize,
-                        height: mapWidth * _levelGroundWidth * _closeButtonSize,
-                      ),
-                    ),
-                  ),
-                  // Continue button
-                  Positioned(
-                    left: (mapWidth * _levelGroundWidth * _continueX) -
-                        ((mapWidth * _levelGroundWidth * _continueSize) / 2),
-                    bottom: mapWidth * _levelGroundWidth * _continueY,
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                GameBoard(level: _selectedLevel + 1),
-                          ),
-                        );
-                      },
-                      child: Image.asset(
-                        'assets/images/continue.png',
-                        width: mapWidth * _levelGroundWidth * _continueSize,
-                        fit: BoxFit.contain,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          ),
         ],
       ),
     );

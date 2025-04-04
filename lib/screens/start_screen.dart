@@ -13,7 +13,7 @@ class _StartScreenState extends State<StartScreen> with SafeState<StartScreen> {
   @override
   void initState() {
     super.initState();
-    
+
     // Move precaching to after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       // Precache images
@@ -43,22 +43,20 @@ class _StartScreenState extends State<StartScreen> with SafeState<StartScreen> {
     return Scaffold(
       body: GestureDetector(
         onTap: () {
-          // Navigate to the map view screen
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (context) => const MapView()),
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => MapView()),
           );
         },
         child: Container(
-          width: double.infinity,
-          height: double.infinity,
-          color: Colors.black, // Background color in case image doesn't cover everything
-          child: Image.asset(
-            'assets/images/start.png',
-            fit: BoxFit.contain, // Try contain instead of cover
-            alignment: Alignment.center,
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage('assets/images/start.png'),
+              fit: BoxFit.cover,
+            ),
           ),
         ),
       ),
     );
   }
-} 
+}

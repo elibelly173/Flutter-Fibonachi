@@ -7,6 +7,8 @@ import 'achi_sprite.dart';
 import 'dart:io';
 import 'utils/safe_state.dart';
 import 'models/problem_generator.dart';
+import 'dart:math' as math;
+// import 'models/answer_checker.dart';
 
 // Add at the top of the file after imports
 class FiboFrame {
@@ -250,51 +252,52 @@ class GameBoard extends StatefulWidget {
   State<GameBoard> createState() => _GameBoardState();
 }
 
-class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
+class _GameBoardState extends State<GameBoard>
+    with TickerProviderStateMixin, SafeState {
   // Game state
   late int level;
-  int timer = 0;
-  int score = 0;
-  int rightCount = 0;
-  int problemCount = 0;
-  int wrongCount = 0;
+  late int timer = 0;
+  late int score = 0;
+  late int rightCount = 0;
+  late int problemCount = 0;
+  late int wrongCount = 0;
 
   // Time thresholds
-  int targetTime = 0; // 3 stars time
-  int targetTime1 = 0; // 4 stars time
-  int targetTime2 = 0; // 1 star time
-  int levelTime = 0; // 2 stars time
-  int prevTime = 0;
-  double blueNumber = 0;
-  List<String> problemAnswers = [];
+  late int targetTime; // 3 stars time
+  late int targetTime1; // 4 stars time
+  late int targetTime2 = 0; // 1 star time
+  late int levelTime; // 2 stars time
+  late int prevTime = 0;
+  late double blueNumber = 0;
+  late List<String> problemAnswers = [];
 
   // Answer handling
-  String answerString = "";
-  int answer = 0;
-  bool isNegative = false;
+  late String answerString = "";
+  late int answer = 0;
+  late bool isNegative = false;
 
   // Animation flags
-  bool showingAnswer = false;
-  bool dimFlag = false;
-  bool firstEnterFlag = false;
+  late bool showingAnswer = false;
+  late bool dimFlag = false;
+  late bool firstEnterFlag = false;
 
   // Game mode flags
-  bool fractionMode = false;
-  bool decimalMode = false;
-  int axisMode = 0;
+  late bool fractionMode = false;
+  late bool decimalMode = false;
+  late int axisMode = 0;
 
   // Game state variables
-  List<int> selectedNumbers = [];
+  late List<int> selectedNumbers = [];
 
   // UI positioning constants
-  double _homeButtonX = 0.025; // X position at 2.5% from left
-  double _homeButtonY = 0.03; // Y position at 3% from top
-  double _homeButtonSize = 0.07; // Size at 7% of screen width
+  late double _homeButtonX = 0.025; // X position at 2.5% from left
+  late double _homeButtonY = 0.03; // Y position at 3% from top
+  late double _homeButtonSize = 0.07; // Size at 7% of screen width
 
   // Add these three variables here:
-  double leftArrowX = 0.40 - 0.02; // X position at 38% from left
-  double leftArrowY = 0.57; // Y position at 57% from top
-  double leftArrowSize = 0.17; // Size at 17% of screen width
+  late double leftArrowX = 0.40 - 0.02; // X position at 38% from left
+  late double leftArrowY = 0.57; // Y position at 57% from top
+  late double leftArrowSize = 0.17; // Size at 17% of screen width
 
   // Grid layout constants
   final double _gridWidth = 0.8; // 80% of screen width
@@ -302,62 +305,62 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   final double _gridY = 0.3; // 30% from top
 
   // Coconut constants
-  double _coconutRowHeight = 0.05; // Reduced from 0.08
-  double _coconutRowBottom = 0.03; // Keep at 3% from bottom
-  double _coconutSize = 0.045; // Reduced from 0.065
-  double _coconutRowWidth = 0.85; // Removed 'final' keyword
+  late double _coconutRowHeight = 0.05; // Reduced from 0.08
+  late double _coconutRowBottom = 0.03; // Keep at 3% from bottom
+  late double _coconutSize = 0.045; // Reduced from 0.065
+  late double _coconutRowWidth = 0.85; // Removed 'final' keyword
 
   // Home button state
-  bool _isHomePressed = false;
+  late bool _isHomePressed = false;
 
   // Add to state variables
-  List<Widget> problemWidgets = [];
+  late List<Widget> problemWidgets = [];
 
   // Keep these
   late Image achiSprite;
   late Image fiboSprite;
 
   // Add adjustment variables
-  double clockX = 0.635; // X position at 63.5% from left
-  double clockY = 0.82; // Y position at 82% from bottom
-  double clockSize = 0.07; // Size at 7% of screen width
+  late double clockX = 0.635; // X position at 63.5% from left
+  late double clockY = 0.82; // Y position at 82% from bottom
+  late double clockSize = 0.07; // Size at 7% of screen width
 
   // Update initial score board values
-  double scoreX = 0.41; // 41% from left
-  double scoreY = 0.85; // 85% from bottom
-  double scoreSize = 0.2; // 20% of screen width
+  late double scoreX = 0.41; // 41% from left
+  late double scoreY = 0.85; // 85% from bottom
+  late double scoreSize = 0.2; // 20% of screen width
 
   // Add at the top with other variables
-  Timer? _clockTimer;
+  late Timer? _clockTimer;
 
   // Add with other state variables
   late Image treeSprite;
-  String currentTree = 'tree10';
-  bool _isDisposed = false;
+  late String currentTree = 'tree10';
+  late bool _isDisposed = false;
 
   // Update tree position variables
-  double treeX = 0.72; // X position at 72%
-  double treeY = 0.11; // Y position at 11%
-  double treeSize = 0.28; // Size at 28%
+  late double treeX = 0.72; // X position at 72%
+  late double treeY = 0.11; // Y position at 11%
+  late double treeSize = 0.28; // Size at 28%
 
   // Add tick tracking
-  int currentTicks = 0;
+  late int currentTicks = 0;
 
   // Keep tick position variables relative to tree
-  double tickOffsetX = 0.14; // Update from 0.08
-  double tickOffsetY = 0.165; // Update from 0.20
-  double tickScale = 0.5; // Update from 0.35
+  late double tickOffsetX = 0.14; // Update from 0.08
+  late double tickOffsetY = 0.165; // Update from 0.20
+  late double tickScale = 0.5; // Update from 0.35
 
   // Update Fibo position variables
-  double fiboX = 0.802; // Update X position
-  double fiboY = 0.191; // Update Y position
-  double fiboSize = 0.099; // Update size
+  late double fiboX = 0.802; // Update X position
+  late double fiboY = 0.191; // Update Y position
+  late double fiboSize = 0.099; // Update size
 
   // Add state for Fibo selection
-  bool _isFiboSelected = false;
+  late bool _isFiboSelected = false;
 
   // Add near other Fibo variables
-  int _currentFrame = 0; // Track which frame we're showing
+  late int _currentFrame = 0; // Track which frame we're showing
 
   // Add animation controller
   late AnimationController _fiboController;
@@ -451,7 +454,7 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   };
 
   // Replace individual frame loading with sprite sheet loading
-  ui.Image? _fiboSprite;
+  late ui.Image? _fiboSprite;
 
   Future<void> _loadFiboSprite() async {
     if (!mounted) return;
@@ -490,6 +493,9 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
     print("GameBoard initState started");
     level = widget.level;
     _setTreeType();
+
+    // Initialize controller just once
+    _customTextController = TextEditingController();
 
     // Generate problems for this level
     generateProblems();
@@ -543,6 +549,36 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
     });
 
     print("GameBoard initState completed");
+
+    // Start the timer
+    int timerValue =
+        0; // Add this instead of using the Timer object as a counter
+
+    // Then update the timer initialization to:
+    _clockTimer = Timer.periodic(Duration(milliseconds: 100), (timer) {
+      if (mounted && !levelCompleteFlag) {
+        safeSetState(() {
+          timerValue +=
+              1; // Use timerValue instead of trying to increment the Timer object
+
+          // Update the clock visual
+          if (timerValue <= targetTime1 * 10) {
+            // Blue timer
+          } else if (timerValue > targetTime1 * 10 &&
+              timerValue < targetTime * 10) {
+            // Green timer
+          } else if (timerValue > targetTime * 10 &&
+              timerValue < levelTime * 10) {
+            // Yellow timer
+          } else {
+            // Red timer
+          }
+        });
+      }
+    });
+
+    // Add this with your other initializations
+    _customTextController = TextEditingController();
   }
 
   void _setTreeType() {
@@ -596,6 +632,7 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
     _fiboController.dispose();
     _achiController.dispose();
     _clockTimer?.cancel();
+    _customTextController.dispose();
     super.dispose();
   }
 
@@ -762,115 +799,285 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
             // Keys (coconuts)
             ..._buildCoconuts(screenWidth, screenHeight),
 
-            // Achi's thought bubble
+            // Position adjustment controls
             Positioned(
-              left: screenWidth * thoughtBubbleX,
-              top: screenHeight * thoughtBubbleY,
+              bottom: 10,
+              left: 10,
               child: Container(
-                width: screenWidth * thoughtBubbleSize,
-                height: screenWidth * thoughtBubbleSize * 0.8,
-                child: Center(
-                  child: buildCurrentProblem(),
+                padding: EdgeInsets.all(6),
+                color: Colors.white.withOpacity(0.9),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Bubble Adjustments",
+                        style: TextStyle(
+                            fontSize: 12, fontWeight: FontWeight.bold)),
+
+                    // Achi Thought Bubble
+                    Text(
+                        "Achi Thought (${achiThoughtTextX.toStringAsFixed(2)}, ${achiThoughtTextY.toStringAsFixed(2)}, ${achiThoughtTextSize.toStringAsFixed(1)})",
+                        style: TextStyle(
+                            fontSize: 10, fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMiniButton("X-",
+                            () => safeSetState(() => achiThoughtTextX -= 0.01)),
+                        _buildMiniButton("X+",
+                            () => safeSetState(() => achiThoughtTextX += 0.01)),
+                        _buildMiniButton("Y-",
+                            () => safeSetState(() => achiThoughtTextY -= 0.01)),
+                        _buildMiniButton("Y+",
+                            () => safeSetState(() => achiThoughtTextY += 0.01)),
+                        _buildMiniButton(
+                            "S-",
+                            () =>
+                                safeSetState(() => achiThoughtTextSize -= 1.0)),
+                        _buildMiniButton(
+                            "S+",
+                            () =>
+                                safeSetState(() => achiThoughtTextSize += 1.0)),
+                      ],
+                    ),
+
+                    SizedBox(height: 5),
+                    // Achi Speech Bubble
+                    Text(
+                        "Achi Speech (${achiSpeechTextX.toStringAsFixed(2)}, ${achiSpeechTextY.toStringAsFixed(2)}, ${achiSpeechTextSize.toStringAsFixed(1)})",
+                        style: TextStyle(
+                            fontSize: 10, fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMiniButton("X-",
+                            () => safeSetState(() => achiSpeechTextX -= 0.01)),
+                        _buildMiniButton("X+",
+                            () => safeSetState(() => achiSpeechTextX += 0.01)),
+                        _buildMiniButton("Y-",
+                            () => safeSetState(() => achiSpeechTextY -= 0.01)),
+                        _buildMiniButton("Y+",
+                            () => safeSetState(() => achiSpeechTextY += 0.01)),
+                        _buildMiniButton(
+                            "S-",
+                            () =>
+                                safeSetState(() => achiSpeechTextSize -= 1.0)),
+                        _buildMiniButton(
+                            "S+",
+                            () =>
+                                safeSetState(() => achiSpeechTextSize += 1.0)),
+                      ],
+                    ),
+
+                    SizedBox(height: 5),
+                    // Fibo Speech Bubble
+                    Text(
+                        "Fibo Speech (${fiboSpeechTextX.toStringAsFixed(2)}, ${fiboSpeechTextY.toStringAsFixed(2)}, ${fiboSpeechTextSize.toStringAsFixed(1)})",
+                        style: TextStyle(
+                            fontSize: 10, fontWeight: FontWeight.bold)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMiniButton("X-",
+                            () => safeSetState(() => fiboSpeechTextX -= 0.01)),
+                        _buildMiniButton("X+",
+                            () => safeSetState(() => fiboSpeechTextX += 0.01)),
+                        _buildMiniButton("Y-",
+                            () => safeSetState(() => fiboSpeechTextY -= 0.01)),
+                        _buildMiniButton("Y+",
+                            () => safeSetState(() => fiboSpeechTextY += 0.01)),
+                        _buildMiniButton(
+                            "S-",
+                            () =>
+                                safeSetState(() => fiboSpeechTextSize -= 1.0)),
+                        _buildMiniButton(
+                            "S+",
+                            () =>
+                                safeSetState(() => fiboSpeechTextSize += 1.0)),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            // Achi's problem bubble
+            // Achi's thought bubble with problem
             Positioned(
-              left: screenWidth * speechBubbleAchiX,
-              top: screenHeight * speechBubbleAchiY,
-              child: Image.asset(
-                'assets/images/game/problem_small.png',
-                width: screenWidth * speechBubbleAchiSize,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  print('Error loading problem bubble: $error');
-                  return Container(
-                    width: screenWidth * speechBubbleAchiSize,
-                    height: screenWidth * speechBubbleAchiSize * 0.7,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(20),
+              left: screenWidth * 0.09,
+              top: screenHeight * 0.08,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/game/thought.png',
+                    width: screenWidth * 0.27,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: screenWidth * 0.27,
+                        height: screenWidth * 0.27 * 0.8,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    left: screenWidth * (achiThoughtTextX - 0.09),
+                    top: screenWidth * (achiThoughtTextY - 0.08),
+                    child: Container(
+                      width: screenWidth * 0.20,
+                      height: screenWidth * 0.15,
+                      alignment: Alignment.center,
+                      child: Text(
+                        achiThoughtText,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: achiThoughtTextSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
-                    child: Center(child: Text('Problem')),
-                  );
-                },
+                  ),
+                ],
+              ),
+            ),
+
+            // Achi's speech bubble
+            Positioned(
+              left: screenWidth * 0.28,
+              top: screenHeight * 0.48,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/game/problem_small.png',
+                    width: screenWidth * 0.25,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: screenWidth * 0.25,
+                        height: screenWidth * 0.25 * 0.7,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    left: screenWidth * (achiSpeechTextX - 0.28),
+                    top: screenWidth * (achiSpeechTextY - 0.48),
+                    child: Container(
+                      width: screenWidth * 0.18,
+                      height: screenWidth * 0.12,
+                      alignment: Alignment.center,
+                      child: Text(
+                        achiSpeechText,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: achiSpeechTextSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
 
             // Fibo's answer bubble
             Positioned(
-              left: screenWidth * speechBubbleFiboX,
-              top: screenHeight * speechBubbleFiboY,
-              child: Container(
-                width: screenWidth * speechBubbleFiboSize,
-                height: screenWidth * speechBubbleFiboSize * 0.7,
-                child: Center(
-                  child: Text(
-                    userAnswer,
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 24,
+              left: screenWidth * 0.65,
+              top: screenHeight * 0.37,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Image.asset(
+                    'assets/images/game/Bubble_Small.png',
+                    width: screenWidth * 0.17,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: screenWidth * 0.17,
+                        height: screenWidth * 0.17 * 0.7,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.8),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                      );
+                    },
+                  ),
+                  Positioned(
+                    left: screenWidth * (fiboSpeechTextX - 0.65),
+                    top: screenWidth * (fiboSpeechTextY - 0.37),
+                    child: Container(
+                      width: screenWidth * 0.12,
+                      height: screenWidth * 0.10,
+                      alignment: Alignment.center,
+                      child: Text(
+                        fiboSpeechText,
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: fiboSpeechTextSize,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                ],
               ),
             ),
 
-            // Left arrow image
+            // Enter button
             Positioned(
-              left: screenWidth * leftArrowX,
-              top: screenHeight * leftArrowY,
+              right: screenWidth * (1 - enterButtonX),
+              bottom: screenHeight * enterButtonY,
               child: GestureDetector(
-                onTap: () {
-                  // Handle left arrow press (previous problem)
-                  print('Left arrow pressed');
-                },
+                onTap: onEnterKeyPressed,
                 child: Image.asset(
-                  'assets/images/game/left.png',
-                  width: screenWidth * leftArrowSize,
+                  'assets/images/game/Enter.png',
+                  width: screenWidth * enterButtonSize,
                   fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) {
-                    print('Error loading left arrow: $error');
+                    print('Error loading Enter button: $error');
                     return Container(
-                      width: screenWidth * leftArrowSize,
-                      height: screenWidth * leftArrowSize,
+                      width: screenWidth * enterButtonSize,
+                      height: screenWidth * enterButtonSize,
                       decoration: BoxDecoration(
-                        color: Colors.blue.withOpacity(0.7),
-                        shape: BoxShape.circle,
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Icon(Icons.arrow_back, color: Colors.white),
+                      child: Center(child: Text('Enter')),
                     );
                   },
                 ),
               ),
             ),
 
-            // Position adjustment controls
+            // Delete button
             Positioned(
-              bottom: 5,
-              left: 5,
-              child: Container(
-                padding: EdgeInsets.all(6),
-                color: Colors.white.withOpacity(0.6),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                        "Left Arrow (${leftArrowX.toStringAsFixed(2)},${leftArrowY.toStringAsFixed(2)},${leftArrowSize.toStringAsFixed(2)})",
-                        style: TextStyle(fontSize: 10)),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        _buildMiniButton("X-", () => leftArrowX -= 0.01),
-                        _buildMiniButton("X+", () => leftArrowX += 0.01),
-                        _buildMiniButton("Y-", () => leftArrowY -= 0.01),
-                        _buildMiniButton("Y+", () => leftArrowY += 0.01),
-                        _buildMiniButton("S-", () => leftArrowSize -= 0.01),
-                        _buildMiniButton("S+", () => leftArrowSize += 0.01),
-                      ],
-                    ),
-                  ],
+              left: screenWidth * deleteButtonX,
+              bottom: screenHeight * deleteButtonY,
+              child: GestureDetector(
+                onTap: onDeleteKeyPressed,
+                child: Image.asset(
+                  'assets/images/game/Delete.png',
+                  width: screenWidth * deleteButtonSize,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading Delete button: $error');
+                    return Container(
+                      width: screenWidth * deleteButtonSize,
+                      height: screenWidth * deleteButtonSize,
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Center(child: Text('Del')),
+                    );
+                  },
                 ),
               ),
             ),
@@ -887,7 +1094,7 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
       children: [
         // Base clock
         Image.asset(
-          'assets/images/GameBoard/Clock/v3/Base.png',
+          'assets/images/GameBoard/Clock/v3/Clock/Dial Circle.png',
           width: screenWidth * clockSize,
           fit: BoxFit.contain,
           errorBuilder: (context, error, stackTrace) {
@@ -981,11 +1188,11 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
               onNumberKeyPressed(keyNumber);
             },
             child: Image.asset(
-              'assets/images/key/key$keyNumber.png',
+              'assets/images/key/key${i == 10 ? 10 : i}.png',
               width: keyWidth,
               fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
-                print('Error loading key$keyNumber: $error');
+                print('Error loading key${i == 10 ? 10 : i}: $error');
                 return Container(
                   width: keyWidth,
                   height: keyWidth,
@@ -1930,7 +2137,7 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   }
 
   // Inside _GameBoardState, add these variables
-  List<MathProblem> problems = [];
+  List<Map<String, dynamic>> problems = [];
   int currentProblemIndex = 0;
   String userAnswer = "";
 
@@ -1938,45 +2145,117 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
   void generateProblems() {
     problems.clear();
 
-    // Generate 10 problems for this level
+    // Generate 10 simple problems for this level
     for (int i = 0; i < 10; i++) {
-      problems.add(ProblemGenerator.generateProblem(level));
+      problems.add({'problem': "5 + 3", 'answer': "8"});
     }
   }
 
-  // Add the checkAnswer method
-  void checkAnswer() {
-    if (userAnswer == problems[currentProblemIndex].answer) {
-      // Correct answer
-      safeSetState(() {
-        rightCount++;
-        currentProblemIndex++;
-        userAnswer = "";
+  // Add these helper methods to your _GameBoardState class
+  MathProblem _generateAdditionProblem() {
+    final random = math.Random();
+    final int a = 1 + random.nextInt(9);
+    final int b = 1 + random.nextInt(9);
 
-        // Update tree with new tick
-        addTick(rightCount);
+    final String problem = "$a + $b";
+    final String answer = "${a + b}";
 
-        // Play Achi animation
-        playAchiAnimation();
-      });
+    return MathProblem(problem: problem, answer: answer, level: 1);
+  }
 
-      // If all problems are answered correctly, show report
-      if (currentProblemIndex >= problems.length) {
-        showLevelCompleteDialog();
-      } else {
-        // Move to next problem with animation
-        animateProblemTransition();
-      }
+  MathProblem _generateAddSubProblem() {
+    final random = math.Random();
+    final bool isAddition = random.nextBool();
+    final int a = 5 + random.nextInt(10);
+    final int b = 1 + random.nextInt(5);
+
+    final String operation = isAddition ? "+" : "-";
+    final String problem = "$a $operation $b";
+    final String answer = isAddition ? "${a + b}" : "${a - b}";
+
+    return MathProblem(problem: problem, answer: answer, level: 6);
+  }
+
+  MathProblem _generateMultiplicationProblem() {
+    final random = math.Random();
+    final int a = 1 + random.nextInt(9);
+    final int b = 1 + random.nextInt(9);
+
+    final String problem = "$a × $b";
+    final String answer = "${a * b}";
+
+    return MathProblem(problem: problem, answer: answer, level: 11);
+  }
+
+  MathProblem _generateDivisionProblem() {
+    final random = math.Random();
+    final int b = 1 + random.nextInt(9);
+    final int answer = 1 + random.nextInt(9);
+    final int a = b * answer;
+
+    final String problem = "$a ÷ $b";
+
+    return MathProblem(problem: problem, answer: "$answer", level: 16);
+  }
+
+  MathProblem _generateFractionProblem(int level) {
+    final random = math.Random();
+    if (level == 20) {
+      // Simple fraction identification
+      final int numerator = 1 + random.nextInt(5);
+      final int denominator = 2 + random.nextInt(8);
+
+      final String problem = "$numerator/$denominator";
+      final String answer = "$numerator/$denominator";
+
+      return MathProblem(problem: problem, answer: answer, level: level);
     } else {
-      // Wrong answer
-      safeSetState(() {
-        wrongCount++;
-        userAnswer = "";
+      // Fraction addition
+      final int denominator = 2 + random.nextInt(8);
+      final int numerator1 = 1 + random.nextInt(denominator);
+      final int numerator2 = 1 + random.nextInt(denominator);
 
-        // Play Fibo animation
-        _startFiboAnimation();
-      });
+      final String problem =
+          "$numerator1/$denominator + $numerator2/$denominator";
+
+      // Calculate answer (simplified)
+      int resultNumerator = numerator1 + numerator2;
+      int resultDenominator = denominator;
+
+      // Simplify fraction (if possible)
+      int gcd = _findGCD(resultNumerator, resultDenominator);
+      resultNumerator ~/= gcd;
+      resultDenominator ~/= gcd;
+
+      final String answer = "$resultNumerator/$resultDenominator";
+
+      return MathProblem(problem: problem, answer: answer, level: level);
     }
+  }
+
+  MathProblem _generateMixedProblem(int level) {
+    final random = math.Random();
+    final int operation = random.nextInt(4);
+
+    switch (operation) {
+      case 0:
+        return _generateAdditionProblem();
+      case 1:
+        return _generateAddSubProblem();
+      case 2:
+        return _generateMultiplicationProblem();
+      default:
+        return _generateDivisionProblem();
+    }
+  }
+
+  int _findGCD(int a, int b) {
+    while (b != 0) {
+      int t = b;
+      b = a % b;
+      a = t;
+    }
+    return a;
   }
 
   // Add this method to handle number key input
@@ -2011,21 +2290,282 @@ class _GameBoardState extends State<GameBoard> with TickerProviderStateMixin {
 
   // Add this method to add a tick to the tree
   void addTick(int tickNumber) {
-    // Implementation will depend on your tree visualization
+    // Implementation depends on your tree visualization
+    print("Added tick $tickNumber");
   }
 
   // Add a method to build the current problem
   Widget buildCurrentProblem() {
-    if (currentProblemIndex >= problems.length) {
-      return Container();
-    }
-
     return Text(
-      problems[currentProblemIndex].problem,
+      "5 + 3",
       style: TextStyle(
         color: Colors.black,
         fontSize: 24,
+        fontWeight: FontWeight.bold,
       ),
     );
   }
+
+  void showLevelCompleteDialog() {
+    levelCompleteFlag = true;
+
+    int levelSpeed =
+        (rightCount * 180 ~/ (timer > 0 ? timer : 1)).clamp(0, 100);
+    int levelAccuracy = rightCount > 0
+        ? ((rightCount - wrongCount) * 100 ~/ rightCount).clamp(0, 100)
+        : 0;
+
+    // Calculate star rating
+    int speedStarCount = 0;
+    if (timer <= targetTime1 * 10) {
+      speedStarCount = 4;
+    } else if (timer > targetTime1 * 10 && timer <= targetTime * 10) {
+      speedStarCount = 3;
+    } else if (timer > targetTime * 10 && timer <= levelTime * 10) {
+      speedStarCount = 2;
+    } else {
+      speedStarCount = 1;
+    }
+
+    // Reduce stars for wrong answers
+    speedStarCount -= wrongCount;
+    if (speedStarCount < 1) speedStarCount = 1;
+
+    // Show the dialog with appropriate messaging
+    String titleMessage;
+    if (speedStarCount == 4) {
+      titleMessage = "Amazing!";
+    } else if (speedStarCount == 3) {
+      titleMessage = "Great Job!";
+    } else if (speedStarCount == 2) {
+      titleMessage = "You Passed!";
+    } else {
+      titleMessage = "Keep Trying!";
+    }
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20.0),
+          ),
+          child: Container(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  titleMessage,
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 20),
+                Text('Time: ${(timer / 10).toStringAsFixed(1)} seconds'),
+                Text('Errors: $wrongCount'),
+                SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: List.generate(
+                    speedStarCount,
+                    (index) => Icon(
+                      Icons.star,
+                      color: Colors.amber,
+                      size: 40,
+                    ),
+                  ),
+                ),
+                SizedBox(height: 20),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.pop(context); // Return to map
+                      },
+                      child: Text('Map'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        resetGame();
+                      },
+                      child: Text('Retry'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        if (level < 32) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => GameBoard(level: level + 1),
+                            ),
+                          );
+                        } else {
+                          Navigator.pop(
+                              context); // Return to map if at max level
+                        }
+                      },
+                      child: Text('Next'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // Add this method to reset the game
+  void resetGame() {
+    safeSetState(() {
+      rightCount = 0;
+      wrongCount = 0;
+      timer = 0;
+      currentProblemIndex = 0;
+      userAnswer = "";
+      showingAnswer = false;
+      levelCompleteFlag = false;
+
+      // Generate new problems
+      generateProblems();
+    });
+  }
+
+  void checkAnswer() {
+    if (currentProblemIndex >= problems.length) return;
+
+    if (userAnswer == problems[currentProblemIndex]['answer']) {
+      // Correct answer logic
+      safeSetState(() {
+        // Calculate score based on time
+        double subtract =
+            (timerValue - prevTime) / 10.0; // Use double instead of float
+
+        if (subtract <= (blueNumber / 3.0)) {
+          score += 500;
+        } else if (subtract > (blueNumber / 3.0) &&
+            subtract < (3.536 * blueNumber)) {
+          score += (542 - (125 * subtract) / blueNumber).toInt(); // Cast to int
+        } else {
+          score += 100;
+        }
+
+        prevTime = timerValue;
+
+        rightCount++;
+        currentProblemIndex++;
+        userAnswer = "";
+
+        // Update tree with new tick
+        addTick(rightCount);
+
+        // Play Achi animation
+        _startAchiAnimation();
+
+        // If all problems are solved, show level complete
+        if (rightCount >= targetNumber - 1) {
+          // Use rightCount instead of undefined ticksCount
+          showLevelCompleteDialog();
+        } else {
+          // Create a new problem
+          generateNewProblem(); // Use a properly defined method
+        }
+      });
+    } else {
+      // Wrong answer logic
+      safeSetState(() {
+        wrongCount++;
+        userAnswer = "";
+
+        // Play Fibo animation
+        _startFiboAnimation();
+
+        // Optionally add vibration feedback
+        // Add import for services
+        // import 'package:flutter/services.dart';
+        // Then you can use:
+        // HapticFeedback.vibrate();
+
+        // For now, just print
+        print("Wrong answer!");
+      });
+    }
+  }
+
+  // Add this method to generate a new problem
+  void generateNewProblem() {
+    // Just use a simple hardcoded problem for now
+    if (currentProblemIndex >= problems.length) {
+      problems.add({'problem': "7 + 4", 'answer': "11"});
+    }
+  }
+
+  // Add with other state variables
+  bool levelCompleteFlag = false;
+
+  // Add this method to your _GameBoardState class
+  void _startAchiAnimation() {
+    if (_achiController.isAnimating) {
+      _achiController.stop();
+    }
+
+    safeSetState(() {
+      _currentAchiFrame = 1;
+    });
+
+    _achiController.reset();
+    _achiController.forward().then((_) {
+      safeSetState(() {
+        // Return to idle frame after animation
+        _currentAchiFrame = 3;
+      });
+    });
+  }
+
+  // Add new variables for the bush
+  late double bushX =
+      -0.02; // X position at -2% from left (slightly off-screen)
+  late double bushY = 0.58; // Y position at 58% from top
+  late double bushSize = 0.17; // Size at 17% of screen width
+
+  // Also add variables for Enter and Delete buttons
+  late double enterButtonX = 0.8; // X position at 80% from left
+  late double enterButtonY = 0.18; // Y position at 18% from bottom
+  late double enterButtonSize = 0.06; // Size at 6% of screen width
+
+  late double deleteButtonX = 0.65; // X position at 65% from left
+  late double deleteButtonY = 0.18; // Y position at 18% from bottom
+  late double deleteButtonSize = 0.06; // Size at 6% of screen width
+
+  // Add at the top of your _GameBoardState class with other state variables
+  int targetNumber = 5; // Default to 5 targets
+  int timerValue = 0; // Timer counter
+
+  String achiThoughtText = "53+98";
+  String achiSpeechText = "53+93";
+  String fiboSpeechText = "146";
+
+  // Add with other state variables
+  late TextEditingController _customTextController;
+
+  // Add these variables with your other state variables
+  double achiThoughtTextX = 0.12;
+  double achiThoughtTextY = 0.09;
+  double achiThoughtTextSize = 44.0;
+
+  double achiSpeechTextX = 0.34;
+  double achiSpeechTextY = 0.465;
+  double achiSpeechTextSize = 44.0;
+
+  double fiboSpeechTextX = 0.65;
+  double fiboSpeechTextY = 0.38;
+  double fiboSpeechTextSize = 45.0;
 }
