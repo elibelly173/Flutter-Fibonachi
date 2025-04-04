@@ -2,25 +2,24 @@ import 'package:flutter/material.dart';
 
 /// A mixin that provides safe setState functionality for StatefulWidgets
 mixin SafeState<T extends StatefulWidget> on State<T> {
-  bool _mounted = true;
+  bool _isDisposed = false;
 
   @override
   void initState() {
     super.initState();
-    _mounted = true;
   }
 
   /// Safely calls setState only if the widget is still mounted
-  void safeSetState(VoidCallback action) {
-    if (_mounted && mounted) {
-      setState(action);
+  void safeSetState(VoidCallback fn) {
+    if (!_isDisposed && mounted) {
+      setState(fn);
     }
   }
 
   /// Cancels all animation controllers and timers in dispose
   @override
   void dispose() {
-    _mounted = false;
+    _isDisposed = true;
     super.dispose();
   }
 }
