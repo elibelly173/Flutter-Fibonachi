@@ -12,11 +12,6 @@ class _GameBoardState extends State<GameBoard> with SafeState<GameBoard> {
   // Define variables for your game elements
   late double dialSize;
 
-  @override
-  void initState() {
-    super.initState();
-    // Initialize any controllers or timers here
-  }
 
   @override
   void dispose() {

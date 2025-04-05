@@ -799,123 +799,115 @@ class _GameBoardState extends State<GameBoard>
             // Keys (coconuts)
             ..._buildCoconuts(screenWidth, screenHeight),
 
-            // Enter button
+            // Achi's thought bubble
             Positioned(
-              right: screenWidth * (1 - enterButtonX),
-              bottom: screenHeight * enterButtonY,
-              child: GestureDetector(
-                onTap: onEnterKeyPressed,
-                child: Image.asset(
-                  'assets/images/game/Enter.png',
-                  width: screenWidth * enterButtonSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading Enter button: $error');
-                    return Container(
-                      width: screenWidth * enterButtonSize,
-                      height: screenWidth * enterButtonSize,
-                      decoration: BoxDecoration(
-                        color: Colors.green,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(child: Text('Enter')),
-                    );
-                  },
+              left: screenWidth * thoughtBubbleX,
+              top: screenHeight * thoughtBubbleY,
+              child: Container(
+                width: screenWidth * thoughtBubbleSize,
+                height: screenWidth * thoughtBubbleSize * 0.8,
+                child: Center(
+                  child: buildCurrentProblem(),
                 ),
               ),
             ),
 
-            // Delete button
+            // Achi's problem bubble
             Positioned(
-              left: screenWidth * deleteButtonX,
-              bottom: screenHeight * deleteButtonY,
-              child: GestureDetector(
-                onTap: onDeleteKeyPressed,
-                child: Image.asset(
-                  'assets/images/game/Delete.png',
-                  width: screenWidth * deleteButtonSize,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    print('Error loading Delete button: $error');
-                    return Container(
-                      width: screenWidth * deleteButtonSize,
-                      height: screenWidth * deleteButtonSize,
-                      decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(child: Text('Del')),
-                    );
-                  },
-                ),
+              left: screenWidth * speechBubbleAchiX,
+              top: screenHeight * speechBubbleAchiY,
+              child: Image.asset(
+                'assets/images/game/problem_small.png',
+                width: screenWidth * speechBubbleAchiSize,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  print('Error loading problem bubble: $error');
+                  return Container(
+                    width: screenWidth * speechBubbleAchiSize,
+                    height: screenWidth * speechBubbleAchiSize * 0.7,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Center(child: Text('Problem')),
+                  );
+                },
               ),
             ),
 
             // Achi's thought bubble
             Positioned(
-              left: screenWidth * 0.09,
-              top: screenHeight * 0.08,
-              child: Image.asset(
-                'assets/images/game/thought.png',
-                width: screenWidth * 0.27,
-                fit: BoxFit.contain,
-              ),
-            ),
-            Positioned(
-              left: screenWidth * achiThoughtTextX,
-              top: screenHeight * achiThoughtTextY,
-              child: Text(
-                achiThoughtText,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: achiThoughtTextSize,
-                  fontWeight: FontWeight.bold,
+              left: screenWidth * speechBubbleFiboX,
+              top: screenHeight * speechBubbleFiboY,
+              child: Container(
+                width: screenWidth * speechBubbleFiboSize,
+                height: screenWidth * speechBubbleFiboSize * 0.7,
+                child: Center(
+                  child: Text(
+                    userAnswer,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 24,
+                    ),
+                  ),
                 ),
               ),
             ),
 
-            // Achi's speech bubble
+            // Left arrow image
             Positioned(
-              left: screenWidth * 0.28,
-              top: screenHeight * 0.48,
-              child: Image.asset(
-                'assets/images/game/problem_small.png',
-                width: screenWidth * 0.25,
-                fit: BoxFit.contain,
-              ),
-            ),
-            Positioned(
-              left: screenWidth * achiSpeechTextX,
-              top: screenHeight * achiSpeechTextY,
-              child: Text(
-                achiSpeechText,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: achiSpeechTextSize,
-                  fontWeight: FontWeight.bold,
+              left: screenWidth * leftArrowX,
+              top: screenHeight * leftArrowY,
+              child: GestureDetector(
+                onTap: () {
+                  // Handle left arrow press (previous problem)
+                  print('Left arrow pressed');
+                },
+                child: Image.asset(
+                  'assets/images/game/left.png',
+                  width: screenWidth * leftArrowSize,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading left arrow: $error');
+                    return Container(
+                      width: screenWidth * leftArrowSize,
+                      height: screenWidth * leftArrowSize,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.7),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.arrow_back, color: Colors.white),
+                    );
+                  },
                 ),
               ),
             ),
 
-            // Fibo's speech bubble
+            // Position adjustment controls
             Positioned(
-              left: screenWidth * 0.65,
-              top: screenHeight * 0.37,
-              child: Image.asset(
-                'assets/images/game/Bubble_Small.png',
-                width: screenWidth * 0.17,
-                fit: BoxFit.contain,
-              ),
-            ),
-            Positioned(
-              left: screenWidth * fiboSpeechTextX,
-              top: screenHeight * fiboSpeechTextY,
-              child: Text(
-                fiboSpeechText,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fiboSpeechTextSize,
-                  fontWeight: FontWeight.bold,
+              bottom: 5,
+              left: 5,
+              child: Container(
+                padding: EdgeInsets.all(6),
+                color: Colors.white.withOpacity(0.6),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                        "Left Arrow (${leftArrowX.toStringAsFixed(2)},${leftArrowY.toStringAsFixed(2)},${leftArrowSize.toStringAsFixed(2)})",
+                        style: TextStyle(fontSize: 10)),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildMiniButton("X-", () => leftArrowX -= 0.01),
+                        _buildMiniButton("X+", () => leftArrowX += 0.01),
+                        _buildMiniButton("Y-", () => leftArrowY -= 0.01),
+                        _buildMiniButton("Y+", () => leftArrowY += 0.01),
+                        _buildMiniButton("S-", () => leftArrowSize -= 0.01),
+                        _buildMiniButton("S+", () => leftArrowSize += 0.01),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -2143,269 +2135,4 @@ class _GameBoardState extends State<GameBoard>
       ),
     );
   }
-
-  void showLevelCompleteDialog() {
-    levelCompleteFlag = true;
-
-    int levelSpeed =
-        (rightCount * 180 ~/ (timer > 0 ? timer : 1)).clamp(0, 100);
-    int levelAccuracy = rightCount > 0
-        ? ((rightCount - wrongCount) * 100 ~/ rightCount).clamp(0, 100)
-        : 0;
-
-    // Calculate star rating
-    int speedStarCount = 0;
-    if (timer <= targetTime1 * 10) {
-      speedStarCount = 4;
-    } else if (timer > targetTime1 * 10 && timer <= targetTime * 10) {
-      speedStarCount = 3;
-    } else if (timer > targetTime * 10 && timer <= levelTime * 10) {
-      speedStarCount = 2;
-    } else {
-      speedStarCount = 1;
-    }
-
-    // Reduce stars for wrong answers
-    speedStarCount -= wrongCount;
-    if (speedStarCount < 1) speedStarCount = 1;
-
-    // Show the dialog with appropriate messaging
-    String titleMessage;
-    if (speedStarCount == 4) {
-      titleMessage = "Amazing!";
-    } else if (speedStarCount == 3) {
-      titleMessage = "Great Job!";
-    } else if (speedStarCount == 2) {
-      titleMessage = "You Passed!";
-    } else {
-      titleMessage = "Keep Trying!";
-    }
-
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20.0),
-          ),
-          child: Container(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  titleMessage,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                SizedBox(height: 20),
-                Text('Time: ${(timer / 10).toStringAsFixed(1)} seconds'),
-                Text('Errors: $wrongCount'),
-                SizedBox(height: 10),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: List.generate(
-                    speedStarCount,
-                    (index) => Icon(
-                      Icons.star,
-                      color: Colors.amber,
-                      size: 40,
-                    ),
-                  ),
-                ),
-                SizedBox(height: 20),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        Navigator.pop(context); // Return to map
-                      },
-                      child: Text('Map'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        resetGame();
-                      },
-                      child: Text('Retry'),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                        if (level < 32) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => GameBoard(level: level + 1),
-                            ),
-                          );
-                        } else {
-                          Navigator.pop(
-                              context); // Return to map if at max level
-                        }
-                      },
-                      child: Text('Next'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
-
-  // Add this method to reset the game
-  void resetGame() {
-    safeSetState(() {
-      rightCount = 0;
-      wrongCount = 0;
-      timer = 0;
-      currentProblemIndex = 0;
-      userAnswer = "";
-      showingAnswer = false;
-      levelCompleteFlag = false;
-
-      // Generate new problems
-      generateProblems();
-    });
-  }
-
-  void checkAnswer() {
-    if (currentProblemIndex >= problems.length) return;
-
-    if (userAnswer == problems[currentProblemIndex]['answer']) {
-      // Correct answer logic
-      safeSetState(() {
-        // Calculate score based on time
-        double subtract =
-            (timerValue - prevTime) / 10.0; // Use double instead of float
-
-        if (subtract <= (blueNumber / 3.0)) {
-          score += 500;
-        } else if (subtract > (blueNumber / 3.0) &&
-            subtract < (3.536 * blueNumber)) {
-          score += (542 - (125 * subtract) / blueNumber).toInt(); // Cast to int
-        } else {
-          score += 100;
-        }
-
-        prevTime = timerValue;
-
-        rightCount++;
-        currentProblemIndex++;
-        userAnswer = "";
-
-        // Update tree with new tick
-        addTick(rightCount);
-
-        // Play Achi animation
-        _startAchiAnimation();
-
-        // If all problems are solved, show level complete
-        if (rightCount >= targetNumber - 1) {
-          // Use rightCount instead of undefined ticksCount
-          showLevelCompleteDialog();
-        } else {
-          // Create a new problem
-          generateNewProblem(); // Use a properly defined method
-        }
-      });
-    } else {
-      // Wrong answer logic
-      safeSetState(() {
-        wrongCount++;
-        userAnswer = "";
-
-        // Play Fibo animation
-        _startFiboAnimation();
-
-        // Optionally add vibration feedback
-        // Add import for services
-        // import 'package:flutter/services.dart';
-        // Then you can use:
-        // HapticFeedback.vibrate();
-
-        // For now, just print
-        print("Wrong answer!");
-      });
-    }
-  }
-
-  // Add this method to generate a new problem
-  void generateNewProblem() {
-    // Just use a simple hardcoded problem for now
-    if (currentProblemIndex >= problems.length) {
-      problems.add({'problem': "7 + 4", 'answer': "11"});
-    }
-  }
-
-  // Add with other state variables
-  bool levelCompleteFlag = false;
-
-  // Add this method to your _GameBoardState class
-  void _startAchiAnimation() {
-    if (_achiController.isAnimating) {
-      _achiController.stop();
-    }
-
-    safeSetState(() {
-      _currentAchiFrame = 1;
-    });
-
-    _achiController.reset();
-    _achiController.forward().then((_) {
-      safeSetState(() {
-        // Return to idle frame after animation
-        _currentAchiFrame = 3;
-      });
-    });
-  }
-
-  // Add new variables for the bush
-  late double bushX =
-      -0.02; // X position at -2% from left (slightly off-screen)
-  late double bushY = 0.58; // Y position at 58% from top
-  late double bushSize = 0.17; // Size at 17% of screen width
-
-  // Also add variables for Enter and Delete buttons
-  late double enterButtonX = 0.8; // X position at 80% from left
-  late double enterButtonY = 0.18; // Y position at 18% from bottom
-  late double enterButtonSize = 0.06; // Size at 6% of screen width
-
-  late double deleteButtonX = 0.65; // X position at 65% from left
-  late double deleteButtonY = 0.18; // Y position at 18% from bottom
-  late double deleteButtonSize = 0.06; // Size at 6% of screen width
-
-  // Add at the top of your _GameBoardState class with other state variables
-  int targetNumber = 5; // Default to 5 targets
-  int timerValue = 0; // Timer counter
-
-  String achiThoughtText = "53+98";
-  String achiSpeechText = "53+93";
-  String fiboSpeechText = "146";
-
-  // Add with other state variables
-  late TextEditingController _customTextController;
-
-  // Add these variables with your other state variables
-  double achiThoughtTextX = 0.15; // Updated from 0.12
-  double achiThoughtTextY = 0.195; // Updated from 0.09
-  // Keep the text size the same
-  double achiThoughtTextSize = 44.0;
-
-  double achiSpeechTextX = 0.353; // Updated from 0.34
-  double achiSpeechTextY = 0.505; // Updated from 0.465
-  // Keep the text size the same
-  double achiSpeechTextSize = 44.0;
-
-  double fiboSpeechTextX = 0.665;
-  double fiboSpeechTextY = 0.415;
-  double fiboSpeechTextSize = 45.0;
 }
