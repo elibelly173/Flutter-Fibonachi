@@ -7,6 +7,7 @@ import 'achi_sprite.dart';
 import 'dart:io';
 import 'utils/safe_state.dart';
 import 'models/problem_generator.dart';
+import 'dart:math' as math;
 
 // Add at the top of the file after imports
 class FiboFrame {
@@ -493,7 +494,7 @@ class _GameBoardState extends State<GameBoard>
     _setTreeType();
 
     // Generate problems for this level
-    generateProblems();
+    generateProblemsForLevel();
 
     print("Loading Fibo sprite...");
     _loadFiboSprite();
@@ -814,29 +815,49 @@ class _GameBoardState extends State<GameBoard>
             ),
 
             // Fibo's speech bubble (image only)
-            Positioned(
-              left: screenWidth * speechBubbleFiboX,
-              top: screenHeight * speechBubbleFiboY,
-              child: Image.asset(
-                'assets/images/game/Bubble_Small.png',
-                width: screenWidth * speechBubbleFiboSize,
-                fit: BoxFit.contain,
-              ),
-            ),
-
-            // Fibo's speech bubble text (separate)
-            Positioned(
-              left: screenWidth * fiboSpeechTextX,
-              top: screenHeight * fiboSpeechTextY,
-              child: Text(
-                fiboSpeechText,
-                style: TextStyle(
-                  color: Colors.black,
-                  fontSize: fiboSpeechTextSize,
-                  fontWeight: FontWeight.bold,
+            if (userAnswer.isNotEmpty || fiboSpeechText.isNotEmpty)
+              Positioned(
+                left: screenWidth * speechBubbleFiboX,
+                top: screenHeight * speechBubbleFiboY,
+                child: AnimatedScale(
+                  scale: userAnswer.isNotEmpty || fiboSpeechText.isNotEmpty
+                      ? 1.0
+                      : 0.0,
+                  duration: bubbleAnimationDuration,
+                  curve: Curves.elasticOut,
+                  child: Image.asset(
+                    'assets/images/game/Bubble_Small.png',
+                    width: screenWidth * speechBubbleFiboSize,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ),
-            ),
+
+            // Fibo's speech bubble text (separate)
+            if (userAnswer.isNotEmpty || fiboSpeechText.isNotEmpty)
+              Positioned(
+                left: screenWidth *
+                    (fiboSpeechTextX +
+                        (userAnswer.length == 1 || fiboSpeechText.length == 1
+                            ? 0.015
+                            : 0)),
+                top: screenHeight * fiboSpeechTextY,
+                child: AnimatedScale(
+                  scale: userAnswer.isNotEmpty || fiboSpeechText.isNotEmpty
+                      ? 1.0
+                      : 0.0,
+                  duration: bubbleAnimationDuration,
+                  curve: Curves.elasticOut,
+                  child: Text(
+                    fiboSpeechText.isNotEmpty ? fiboSpeechText : userAnswer,
+                    style: TextStyle(
+                      color: Colors.black,
+                      fontSize: fiboSpeechTextSize,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
 
             // Bush (left.png)
             Positioned(
@@ -912,6 +933,22 @@ class _GameBoardState extends State<GameBoard>
                 ),
               ),
             ),
+
+            // Add this positioned widget in your build method's Stack
+            // For the flying text animation:
+            if (flyingProblemText.isNotEmpty)
+              Positioned(
+                left: screenWidth * flyingProblemTextX,
+                top: screenHeight * flyingProblemTextY,
+                child: Text(
+                  flyingProblemText,
+                  style: TextStyle(
+                    color: Colors.black,
+                    fontSize: achiSpeechTextSize,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
           ],
         ),
       ),
@@ -1968,23 +2005,144 @@ class _GameBoardState extends State<GameBoard>
   }
 
   // Inside _GameBoardState, add these variables
-  List<MathProblem> problems = [];
+  List<Map<String, String>> problems = [];
   int currentProblemIndex = 0;
   String userAnswer = "";
 
-  // Add the generateProblems method
-  void generateProblems() {
+  // Add the generateProblemsForLevel method
+  void generateProblemsForLevel() {
     problems.clear();
 
-    // Generate 10 problems for this level
-    for (int i = 0; i < 10; i++) {
-      problems.add(ProblemGenerator.generateProblem(level));
+    // For level 1, generate simple addition problems (numbers 1-9)
+    if (level == 1) {
+      // Generate initial batch of problems
+      for (int i = 0; i < 5; i++) {
+        _addNewProblem();
+      }
     }
+
+    // Set current problem
+    if (problems.isNotEmpty) {
+      currentProblemIndex = 0;
+      updateProblemDisplay();
+    }
+  }
+
+  // Add this method to generate a new problem based on level
+  void _addNewProblem() {
+    if (level == 1) {
+      final random = math.Random();
+
+      String lastProblem = "";
+      String lastAnswer = "";
+
+      if (problems.isNotEmpty) {
+        lastProblem = problems.last['problem']!;
+        lastAnswer = problems.last['answer']!;
+      }
+
+      String newProblem;
+      int a, b, answer;
+      bool isCommutativeVariation; // Define the variable
+
+      // Keep generating until we get a unique problem
+      do {
+        // Generate numbers between 2 and 10
+        a = 2 + random.nextInt(9); // Generates 2-10
+        b = 2 + random.nextInt(9); // Generates 2-10
+
+        newProblem = "$a + $b";
+        answer = a + b;
+
+        // Check if this is a commutative variation of the last problem
+        isCommutativeVariation =
+            answer.toString() == lastAnswer && newProblem != lastProblem;
+      } while (newProblem == lastProblem || isCommutativeVariation);
+
+      problems.add({
+        'problem': newProblem,
+        'answer': answer.toString(),
+      });
+    }
+  }
+
+  // Replace the updateProblemDisplay method with this improved version
+  void updateProblemDisplay() {
+    if (currentProblemIndex < problems.length) {
+      String problemText = problems[currentProblemIndex]['problem']!;
+
+      // First show the problem in thought bubble
+      safeSetState(() {
+        achiThoughtText = problemText;
+        achiSpeechText = "";
+        fiboSpeechText = "";
+      });
+
+      // After a delay, set up the animation
+      Future.delayed(Duration(milliseconds: 800), () {
+        if (!mounted) return;
+
+        // Clear thought bubble and prepare for animation
+        safeSetState(() {
+          achiThoughtText = "";
+
+          // Show next problem in thought bubble if available
+          if (currentProblemIndex + 1 < problems.length) {
+            achiThoughtText = problems[currentProblemIndex + 1]['problem']!;
+          } else if (problems.length > currentProblemIndex + 1) {
+            achiThoughtText = problems.last['problem']!;
+          }
+
+          // Start the flying animation with AnimatedBuilder
+          _animateTextFlight(problemText);
+        });
+      });
+    }
+  }
+
+  // Add this new method to handle the smooth animation
+  void _animateTextFlight(String problemText) {
+    final controller = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+
+    final startX = achiThoughtTextX;
+    final startY = achiThoughtTextY;
+    final endX = achiSpeechTextX;
+    final endY = achiSpeechTextY;
+
+    final xAnimation =
+        Tween<double>(begin: startX, end: endX).animate(controller);
+    final yAnimation =
+        Tween<double>(begin: startY, end: endY).animate(controller);
+
+    // Update the position on each animation frame
+    controller.addListener(() {
+      safeSetState(() {
+        flyingProblemText = problemText;
+        flyingProblemTextX = xAnimation.value;
+        flyingProblemTextY = yAnimation.value;
+      });
+    });
+
+    // When animation completes, set the text in the speech bubble
+    controller.addStatusListener((status) {
+      if (status == AnimationStatus.completed) {
+        safeSetState(() {
+          flyingProblemText = "";
+          achiSpeechText = problemText;
+        });
+        controller.dispose();
+      }
+    });
+
+    controller.forward();
   }
 
   // Add the checkAnswer method
   void checkAnswer() {
-    if (userAnswer == problems[currentProblemIndex].answer) {
+    if (userAnswer == problems[currentProblemIndex]['answer']) {
       // Correct answer
       safeSetState(() {
         rightCount++;
@@ -2017,39 +2175,120 @@ class _GameBoardState extends State<GameBoard>
     }
   }
 
-  // Add this method to handle number key input
+  // Update number key handling
   void onNumberKeyPressed(int number) {
-    if (!showingAnswer) {
-      // Animate the answer bubble showing
-      safeSetState(() {
-        showingAnswer = true;
-        userAnswer += number.toString();
-      });
-    } else {
-      // Just append the number
-      safeSetState(() {
-        userAnswer += number.toString();
-      });
-    }
-  }
-
-  // Add this method to handle enter key
-  void onEnterKeyPressed() {
-    if (userAnswer.isNotEmpty) {
-      checkAnswer();
-    }
-  }
-
-  // Add this method to handle delete key
-  void onDeleteKeyPressed() {
     safeSetState(() {
-      userAnswer = "";
+      // Add the number to the user's answer
+      userAnswer += number.toString();
+
+      // Update Fibo's speech bubble to show what the user has typed
+      fiboSpeechText = userAnswer;
     });
   }
 
-  // Add this method to add a tick to the tree
+  // Update delete key handling
+  void onDeleteKeyPressed() {
+    safeSetState(() {
+      // Remove the last digit if there is one
+      if (userAnswer.isNotEmpty) {
+        userAnswer = userAnswer.substring(0, userAnswer.length - 1);
+      }
+
+      // Update Fibo's speech bubble
+      fiboSpeechText = userAnswer.isEmpty ? "" : userAnswer;
+    });
+  }
+
+  // Update this method to handle the enter key
+  void onEnterKeyPressed() {
+    if (userAnswer.isEmpty) return;
+
+    // Check if the answer is correct
+    if (userAnswer == problems[currentProblemIndex]['answer']) {
+      // Correct answer!
+      safeSetState(() {
+        rightCount++;
+
+        // Show the answer in Fibo's speech bubble
+        fiboSpeechText = userAnswer;
+
+        // Play Achi animation
+        playAchiAnimation();
+
+        // Add tick to the tree
+        addTick(rightCount);
+
+        // Clear user answer
+        userAnswer = "";
+      });
+
+      // Hide Fibo's bubble after a short delay
+      Future.delayed(Duration(milliseconds: 1200), () {
+        if (mounted) {
+          safeSetState(() {
+            fiboSpeechText = "";
+          });
+
+          // Check if level is complete (20 correct answers)
+          if (rightCount >= 20) {
+            // Level complete!
+            showLevelCompleteDialog();
+          } else {
+            // Move to next problem
+            currentProblemIndex++;
+
+            // Make sure we always have at least one problem ahead
+            if (currentProblemIndex >= problems.length - 1) {
+              _addNewProblem();
+            }
+
+            updateProblemDisplay();
+          }
+        }
+      });
+    } else {
+      // Wrong answer!
+      safeSetState(() {
+        wrongCount++;
+
+        // Show wrong answer feedback in Fibo's bubble briefly
+        fiboSpeechText = "❌";
+
+        // Animate Fibo (sad/disapproving)
+        _startFiboAnimation();
+
+        // Clear the answer after a delay
+        Future.delayed(Duration(milliseconds: 800), () {
+          if (mounted) {
+            safeSetState(() {
+              userAnswer = "";
+              fiboSpeechText = "";
+            });
+          }
+        });
+      });
+    }
+  }
+
+  // Implement the addTick method to show progress on the tree
   void addTick(int tickNumber) {
-    // Implementation will depend on your tree visualization
+    if (tickNumber < 1 || tickNumber > 20) return;
+
+    // Calculate position based on the tree type and tick number
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+
+    // Tree position calculations
+    final treeLeft = screenWidth * treeX;
+    final treeBottom = screenHeight * treeY;
+    final treeWidth = screenWidth * treeSize;
+
+    // Tick mark positioning logic
+    safeSetState(() {
+      // This will be implemented with actual tick images
+      // For now, we'll just update a counter
+      currentTicks = tickNumber;
+    });
   }
 
   // Add a method to build the current problem
@@ -2059,7 +2298,7 @@ class _GameBoardState extends State<GameBoard>
     }
 
     return Text(
-      problems[currentProblemIndex].problem,
+      problems[currentProblemIndex]['problem']!, // Fixed: use map access syntax
       style: TextStyle(
         color: Colors.black,
         fontSize: 24,
@@ -2197,7 +2436,7 @@ class _GameBoardState extends State<GameBoard>
       levelCompleteFlag = false;
 
       // Generate new problems
-      generateProblems();
+      generateProblemsForLevel();
     });
   }
 
@@ -2218,12 +2457,14 @@ class _GameBoardState extends State<GameBoard>
   double bushSize = 0.17; // Keep size the same
 
   // Add these variables with your other UI constants (around line 1060)
-  double achiThoughtTextX = 0.15;
-  double achiThoughtTextY = 0.195;
-  double achiSpeechTextX = 0.353;
-  double achiSpeechTextY = 0.505;
-  double fiboSpeechTextX = 0.665;
-  double fiboSpeechTextY = 0.415;
+  double achiThoughtTextX = 0.155; // Adjust from 0.15 to center better
+  double achiThoughtTextY = 0.195; // Keep the same
+
+  double achiSpeechTextX = 0.365; // Adjust from 0.353 to center better
+  double achiSpeechTextY = 0.505; // Keep the same
+
+  double fiboSpeechTextX = 0.675; // Adjust from 0.665 to center better
+  double fiboSpeechTextY = 0.415; // Keep the same
 
   // Add these variables near your other button position variables (around line 1058)
   // For Enter button
@@ -2235,4 +2476,13 @@ class _GameBoardState extends State<GameBoard>
   double deleteButtonX = 0.65; // X position at 65% from left
   double deleteButtonY = 0.18; // Y position at 18% from bottom
   double deleteButtonSize = 0.06; // Size at 6% of screen width
+
+  // Add these variables to your state class
+  String flyingProblemText = "";
+  double flyingProblemTextX = 0;
+  double flyingProblemTextY = 0;
+
+  // Add these animation variables to your state class
+  double fiboBubbleScale = 0.0;
+  final bubbleAnimationDuration = Duration(milliseconds: 200);
 }
